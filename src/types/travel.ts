@@ -1,4 +1,4 @@
-export type City = 'ALL' | 'CAIRO' | 'LUXOR' | 'ASWAN' | 'HURGHADA';
+export type City = 'ALL' | 'CAIRO' | 'LUXOR';
 
 export type TransportType = 'FLIGHT' | 'TAXI' | 'WALK' | 'FELUCCA' | 'TOUR_BUS' | 'OTHER';
 
@@ -10,7 +10,7 @@ export interface ItineraryItem {
   id: string;
   dayNumber: number; // 1 to 6+
   dateStr: string; // e.g., "10/28 (수)"
-  city: 'CAIRO' | 'LUXOR' | 'ASWAN' | 'HURGHADA';
+  city: 'CAIRO' | 'LUXOR';
   time: string; // e.g., "14:30"
   title: string;
   location: string;
@@ -47,7 +47,7 @@ export interface BudgetItem {
   amount: number;
   paidAmount?: number;
   isPaid: boolean;
-  city: 'CAIRO' | 'LUXOR' | 'ASWAN' | 'HURGHADA' | 'COMMON';
+  city: 'CAIRO' | 'LUXOR' | 'COMMON';
   memo?: string;
   date?: string;
 }
@@ -66,7 +66,7 @@ export interface DriverContact {
 export interface TicketInfo {
   id: string;
   name: string;
-  city: 'CAIRO' | 'LUXOR' | 'ASWAN' | 'HURGHADA';
+  city: 'CAIRO' | 'LUXOR';
   priceEgp: number;
   priceNote?: string;
   paymentMethod: 'CARD_ONLY' | 'CASH_CARD' | 'ONLINE_REQUIRED';

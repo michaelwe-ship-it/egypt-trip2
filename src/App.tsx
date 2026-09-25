@@ -30,6 +30,7 @@ import { ItineraryModal } from './components/ItineraryModal';
 import { CurrencyTipCalculator } from './components/CurrencyTipCalculator';
 import { QuickInfoCards } from './components/QuickInfoCards';
 import { BudgetDashboard } from './components/BudgetDashboard';
+import { HistoryGuideTab } from './components/HistoryGuideTab';
 import { SyncModal } from './components/SyncModal';
 import { EmergencyModal } from './components/EmergencyModal';
 
@@ -43,10 +44,11 @@ import {
   LayoutList, 
   ListTree, 
   BellRing,
-  Users
+  Users,
+  Landmark
 } from 'lucide-react';
 
-type MainTab = 'ITINERARY' | 'CALCULATOR' | 'QUICK_INFO' | 'BUDGET';
+type MainTab = 'ITINERARY' | 'CALCULATOR' | 'QUICK_INFO' | 'BUDGET' | 'HISTORY_GUIDE';
 type ItineraryViewMode = 'TIMELINE' | 'DETAILED';
 
 export default function App() {
@@ -66,7 +68,19 @@ export default function App() {
   });
   const [drivers, setDrivers] = useState<DriverContact[]>(() => {
     const saved = localStorage.getItem('egypt_drivers_cache');
-    return saved ? JSON.parse(saved) : INITIAL_DRIVERS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Reset to updated verified drivers if old placeholder numbers exist
+        if (parsed.some((d: any) => d.phone && d.phone.includes('1234567'))) {
+          return INITIAL_DRIVERS;
+        }
+        return parsed;
+      } catch {
+        return INITIAL_DRIVERS;
+      }
+    }
+    return INITIAL_DRIVERS;
   });
   const [rates, setRates] = useState<ExchangeRates>(DEFAULT_RATES);
 
@@ -264,8 +278,6 @@ export default function App() {
     ALL: itinerary.length,
     CAIRO: itinerary.filter(i => i.city === 'CAIRO').length,
     LUXOR: itinerary.filter(i => i.city === 'LUXOR').length,
-    ASWAN: itinerary.filter(i => i.city === 'ASWAN').length,
-    HURGHADA: itinerary.filter(i => i.city === 'HURGHADA').length,
   };
 
   return (
@@ -402,11 +414,16 @@ export default function App() {
             onUpdateBudget={handleUpdateBudget}
           />
         )}
+
+        {/* Tab 5: History & Essential Guides */}
+        {activeTab === 'HISTORY_GUIDE' && (
+          <HistoryGuideTab />
+        )}
       </main>
 
       {/* 4. Bottom Mobile Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg safe-area-bottom">
-        <div className="max-w-md mx-auto grid grid-cols-4 px-2 py-1.5">
+        <div className="max-w-lg mx-auto grid grid-cols-5 px-1.5 py-1.5">
           {/* Tab 1: Itinerary */}
           <button
             onClick={() => setActiveTab('ITINERARY')}
@@ -417,9 +434,9 @@ export default function App() {
             }`}
           >
             <div className={`p-1.5 rounded-2xl transition ${activeTab === 'ITINERARY' ? 'bg-blue-50 text-blue-600 ring-1 ring-blue-100' : ''}`}>
-              <CalendarDays className="w-5 h-5" />
+              <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-[11px] mt-0.5">일정 관리</span>
+            <span className="text-[10px] sm:text-[11px] mt-0.5">일정</span>
           </button>
 
           {/* Tab 2: Currency & Tips */}
@@ -432,9 +449,9 @@ export default function App() {
             }`}
           >
             <div className={`p-1.5 rounded-2xl transition ${activeTab === 'CALCULATOR' ? 'bg-blue-50 text-blue-600 ring-1 ring-blue-100' : ''}`}>
-              <Coins className="w-5 h-5" />
+              <Coins className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-[11px] mt-0.5">환율 & 팁</span>
+            <span className="text-[10px] sm:text-[11px] mt-0.5">환율·팁</span>
           </button>
 
           {/* Tab 3: Quick Info & Drivers */}
@@ -447,9 +464,9 @@ export default function App() {
             }`}
           >
             <div className={`p-1.5 rounded-2xl transition ${activeTab === 'QUICK_INFO' ? 'bg-blue-50 text-blue-600 ring-1 ring-blue-100' : ''}`}>
-              <TicketCheck className="w-5 h-5" />
+              <TicketCheck className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-[11px] mt-0.5">투어 & 기사</span>
+            <span className="text-[10px] sm:text-[11px] mt-0.5">투어·기사</span>
           </button>
 
           {/* Tab 4: Budget */}
@@ -462,9 +479,24 @@ export default function App() {
             }`}
           >
             <div className={`p-1.5 rounded-2xl transition ${activeTab === 'BUDGET' ? 'bg-blue-50 text-blue-600 ring-1 ring-blue-100' : ''}`}>
-              <WalletCards className="w-5 h-5" />
+              <WalletCards className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-[11px] mt-0.5">예산 관리</span>
+            <span className="text-[10px] sm:text-[11px] mt-0.5">예산</span>
+          </button>
+
+          {/* Tab 5: History & Guide */}
+          <button
+            onClick={() => setActiveTab('HISTORY_GUIDE')}
+            className={`flex flex-col items-center justify-center py-1 rounded-xl transition ${
+              activeTab === 'HISTORY_GUIDE'
+                ? 'text-blue-600 font-bold'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <div className={`p-1.5 rounded-2xl transition ${activeTab === 'HISTORY_GUIDE' ? 'bg-blue-50 text-blue-600 ring-1 ring-blue-100' : ''}`}>
+              <Landmark className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <span className="text-[10px] sm:text-[11px] mt-0.5">역사·가이드</span>
           </button>
         </div>
       </nav>

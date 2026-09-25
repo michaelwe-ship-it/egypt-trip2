@@ -46,7 +46,7 @@ export const BudgetDashboard: React.FC<BudgetDashboardProps> = ({
   const [formAmount, setFormAmount] = useState<number>(0);
   const [formPaidAmount, setFormPaidAmount] = useState<number>(0);
   const [formIsPaid, setFormIsPaid] = useState<boolean>(false);
-  const [formCity, setFormCity] = useState<'CAIRO' | 'LUXOR' | 'ASWAN' | 'HURGHADA' | 'COMMON'>('COMMON');
+  const [formCity, setFormCity] = useState<'CAIRO' | 'LUXOR' | 'COMMON'>('COMMON');
   const [formMemo, setFormMemo] = useState('');
 
   // Cash in hand tracker settings (USD cash & EGP cash)

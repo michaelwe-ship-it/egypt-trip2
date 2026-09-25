@@ -26,7 +26,7 @@ export const ItineraryModal: React.FC<ItineraryModalProps> = ({
 }) => {
   const [dayNumber, setDayNumber] = useState<number>(defaultDayNumber);
   const [dateStr, setDateStr] = useState<string>('10/28 (수)');
-  const [city, setCity] = useState<'CAIRO' | 'LUXOR' | 'ASWAN' | 'HURGHADA'>('CAIRO');
+  const [city, setCity] = useState<'CAIRO' | 'LUXOR'>('CAIRO');
   const [time, setTime] = useState<string>('12:00');
   const [title, setTitle] = useState<string>('');
   const [location, setLocation] = useState<string>('');
@@ -181,8 +181,6 @@ export const ItineraryModal: React.FC<ItineraryModalProps> = ({
               >
                 <option value="CAIRO">카이로 (Cairo)</option>
                 <option value="LUXOR">룩소르 (Luxor)</option>
-                <option value="ASWAN">아스완 (Aswan)</option>
-                <option value="HURGHADA">후르가다 (Hurghada)</option>
               </select>
             </div>
           </div>

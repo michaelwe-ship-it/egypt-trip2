@@ -12,8 +12,6 @@ export const CITIES: { id: City; label: string; enName: string; icon: string }[]
   { id: 'ALL', label: '전체', enName: 'All Cities', icon: '📍' },
   { id: 'CAIRO', label: '카이로', enName: 'Cairo', icon: '🏜️' },
   { id: 'LUXOR', label: '룩소르', enName: 'Luxor', icon: '🏛️' },
-  { id: 'ASWAN', label: '아스완', enName: 'Aswan', icon: '⛵' },
-  { id: 'HURGHADA', label: '후르가다', enName: 'Hurghada', icon: '🌊' },
 ];
 
 export const CityFilter: React.FC<CityFilterProps> = ({

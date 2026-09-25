@@ -2,5 +2,7 @@
   "name": "이집트 허니문 플래너 (Egypt Travel Planner)",
   "description": "결혼 10주년 이집트 여행을 위한 스마트 모바일 웹앱. 카이로, 룩소르, 아스완, 후르가다 일정 타임라인, 부부 2인 실시간 동기화, 실시간 환율 및 팁 계산기, 필수 투어 정보와 예산 관리.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
