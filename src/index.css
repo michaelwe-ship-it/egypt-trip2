@@ -1,1 +1,27 @@
 @import "tailwindcss";
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Mobile-first touch enhancements */
+* {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Prevent unwanted iOS Safari input auto-zoom by keeping font-size >= 16px */
+input, select, textarea {
+  font-size: 16px;
+}
+
+/* Mobile safe area helpers */
+.safe-bottom, .safe-area-bottom {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}

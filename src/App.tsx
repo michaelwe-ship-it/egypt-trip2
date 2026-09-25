@@ -12,7 +12,9 @@ import {
   INITIAL_DRIVERS 
 } from './data/initialData';
 import { 
-  SyncService, 
+  FirebaseSyncService 
+} from './services/firebaseSync';
+import { 
   ConnectionStatus 
 } from './services/websocket';
 import { 
@@ -110,7 +112,7 @@ export default function App() {
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
 
-  const syncServiceRef = useRef<SyncService | null>(null);
+  const syncServiceRef = useRef<FirebaseSyncService | null>(null);
 
   // Cache changes to localStorage
   useEffect(() => {
@@ -149,9 +151,9 @@ export default function App() {
     }, 3200);
   };
 
-  // Initialize Real-Time Sync Service
+  // Initialize Real-Time Sync Service with Firebase Realtime Database
   useEffect(() => {
-    const service = new SyncService(roomId, userRole === 'HUSBAND' ? '남편' : '아내');
+    const service = new FirebaseSyncService(roomId, userRole === 'HUSBAND' ? '남편' : '아내');
     syncServiceRef.current = service;
 
     service.setHandlers({
@@ -309,7 +311,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-4 space-y-4">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-3.5 sm:px-4 py-4 space-y-4 pb-28 sm:pb-24">
         {/* Section Title & View Switcher (for Itinerary Tab) */}
         {activeTab === 'ITINERARY' && (
           <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200">

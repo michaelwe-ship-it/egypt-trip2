@@ -96,64 +96,65 @@ export const CurrencyTipCalculator: React.FC<CurrencyTipCalculatorProps> = ({
       </div>
 
       {/* 1. Main 3-Way Instant Currency Converter */}
-      <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
-              <Coins className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-slate-900">
-                실시간 통화 변환기
-              </h2>
-              <p className="text-[11px] text-slate-500">
-                이집트 파운드(EGP) ↔ 미 달러($) ↔ 원화(KRW)
-              </p>
-            </div>
+      <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-3.5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold shrink-0">
+            <Coins className="w-4 h-4" />
           </div>
+          <div>
+            <h2 className="text-sm font-bold text-slate-900">
+              실시간 통화 변환기
+            </h2>
+            <p className="text-[11px] text-slate-500">
+              이집트 파운드(EGP) ↔ 미 달러($) ↔ 원화(KRW)
+            </p>
+          </div>
+        </div>
 
-          {/* Currency Toggle */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold">
-            {(['EGP', 'USD', 'KRW'] as Currency[]).map((cur) => (
-              <button
-                key={cur}
-                onClick={() => setSourceCurrency(cur)}
-                className={`px-3 py-1 rounded-lg transition ${
-                  sourceCurrency === cur
-                    ? 'bg-white text-blue-700 font-bold shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {cur === 'EGP' ? 'EGP (파운드)' : cur === 'USD' ? 'USD ($)' : 'KRW (원)'}
-              </button>
-            ))}
-          </div>
+        {/* Full-width Mobile Currency Segmented Tabs */}
+        <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+          {(['EGP', 'USD', 'KRW'] as Currency[]).map((cur) => (
+            <button
+              key={cur}
+              onClick={() => setSourceCurrency(cur)}
+              className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition min-h-[38px] active:scale-95 ${
+                sourceCurrency === cur
+                  ? 'bg-white text-blue-700 shadow-xs ring-1 ring-blue-600/30'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              {cur === 'EGP' ? '🇪🇬 EGP' : cur === 'USD' ? '🇺🇸 USD ($)' : '🇰🇷 KRW (원)'}
+            </button>
+          ))}
         </div>
 
         {/* Amount Input Box */}
         <div className="relative">
           <input
             type="number"
+            inputMode="decimal"
             value={amountStr}
             onChange={(e) => setAmountStr(e.target.value)}
             placeholder="0"
-            className="w-full bg-slate-50 border-2 border-blue-600/70 rounded-2xl px-4 py-3 text-2xl font-black text-slate-900 focus:outline-hidden focus:border-blue-600 focus:bg-white font-mono tracking-tight"
+            className="w-full bg-slate-50 border-2 border-blue-600/60 rounded-2xl px-4 py-3.5 text-2xl font-black text-slate-900 focus:outline-hidden focus:border-blue-600 focus:bg-white font-mono tracking-tight"
           />
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-sm font-bold text-slate-500">
-            <span>{sourceCurrency}</span>
-            <button
-              onClick={() => setAmountStr('')}
-              className="text-xs text-slate-500 hover:text-slate-700 ml-1 px-2 py-0.5 rounded bg-slate-200"
-            >
-              초기화
-            </button>
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs font-bold text-slate-500">
+            <span className="font-mono text-sm text-blue-700">{sourceCurrency}</span>
+            {amountStr && (
+              <button
+                onClick={() => setAmountStr('')}
+                className="px-2 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold active:scale-90 transition"
+              >
+                지우기
+              </button>
+            )}
           </div>
         </div>
 
         {/* Fast Conversion Result Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
           {/* EGP Card */}
-          <div className={`p-3.5 rounded-2xl border transition ${
+          <div className={`p-3 rounded-2xl border transition ${
             sourceCurrency === 'EGP'
               ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-200'
               : 'bg-slate-50 border-slate-200'
@@ -161,16 +162,16 @@ export const CurrencyTipCalculator: React.FC<CurrencyTipCalculatorProps> = ({
             <span className="text-[11px] font-bold text-amber-900 flex items-center gap-1">
               🇪🇬 이집트 파운드 (EGP)
             </span>
-            <div className="text-xl font-black font-mono text-amber-950 mt-1">
+            <div className="text-xl font-black font-mono text-amber-950 mt-0.5">
               {Math.round(egpVal).toLocaleString()} <span className="text-xs font-normal text-amber-700">EGP</span>
             </div>
             <p className="text-[10px] text-slate-500 mt-0.5">
-              현지 상점 및 유적지 입장
+              현지 상점 및 유적지 입장료
             </p>
           </div>
 
           {/* KRW Card */}
-          <div className={`p-3.5 rounded-2xl border transition ${
+          <div className={`p-3 rounded-2xl border transition ${
             sourceCurrency === 'KRW'
               ? 'bg-blue-50/70 border-blue-300 ring-1 ring-blue-200'
               : 'bg-slate-50 border-slate-200'
@@ -178,7 +179,7 @@ export const CurrencyTipCalculator: React.FC<CurrencyTipCalculatorProps> = ({
             <span className="text-[11px] font-bold text-blue-900 flex items-center gap-1">
               🇰🇷 대한민국 원화 (KRW)
             </span>
-            <div className="text-xl font-black font-mono text-blue-950 mt-1">
+            <div className="text-xl font-black font-mono text-blue-950 mt-0.5">
               {Math.round(krwVal).toLocaleString()} <span className="text-xs font-normal text-blue-700">원</span>
             </div>
             <p className="text-[10px] text-slate-500 mt-0.5">
@@ -187,7 +188,7 @@ export const CurrencyTipCalculator: React.FC<CurrencyTipCalculatorProps> = ({
           </div>
 
           {/* USD Card */}
-          <div className={`p-3.5 rounded-2xl border transition ${
+          <div className={`p-3 rounded-2xl border transition ${
             sourceCurrency === 'USD'
               ? 'bg-emerald-50/70 border-emerald-300 ring-1 ring-emerald-200'
               : 'bg-slate-50 border-slate-200'
@@ -195,7 +196,7 @@ export const CurrencyTipCalculator: React.FC<CurrencyTipCalculatorProps> = ({
             <span className="text-[11px] font-bold text-emerald-900 flex items-center gap-1">
               🇺🇸 미국 달러 (USD)
             </span>
-            <div className="text-xl font-black font-mono text-emerald-950 mt-1">
+            <div className="text-xl font-black font-mono text-emerald-950 mt-0.5">
               ${usdVal.toFixed(2)}
             </div>
             <p className="text-[10px] text-slate-500 mt-0.5">
@@ -205,9 +206,9 @@ export const CurrencyTipCalculator: React.FC<CurrencyTipCalculatorProps> = ({
         </div>
 
         {/* Quick Amount Buttons (시장/투어 빈출 단위) */}
-        <div>
+        <div className="pt-1">
           <label className="block text-xs font-bold text-slate-700 mb-2">
-            ⚡ 현지 빈출 금액 빠른 계산 (EGP):
+            ⚡ 현지 빈출 금액 원터치 입력 (EGP):
           </label>
           <div className="flex flex-wrap gap-1.5">
             {quickAmountsEgp.map((amount) => {
@@ -219,15 +220,15 @@ export const CurrencyTipCalculator: React.FC<CurrencyTipCalculatorProps> = ({
                     setSourceCurrency('EGP');
                     setAmountStr(String(amount));
                   }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition border flex flex-col items-center ${
-                    sourceCurrency === 'EGP' && parsedAmount === amount
+                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition min-h-[38px] active:scale-95 ${
+                    sourceCurrency === 'EGP' && amountStr === String(amount)
                       ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                      : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200'
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
                   }`}
                 >
-                  <span className="font-bold">{amount} EGP</span>
-                  <span className={`text-[10px] ${sourceCurrency === 'EGP' && parsedAmount === amount ? 'text-blue-100 font-medium' : 'text-slate-500'}`}>
-                    약 {krwEquivalent.toLocaleString()}원
+                  <span>{amount} EGP</span>
+                  <span className="text-[10px] opacity-75 ml-1">
+                    (약 {krwEquivalent.toLocaleString()}원)
                   </span>
                 </button>
               );
@@ -261,6 +262,7 @@ export const CurrencyTipCalculator: React.FC<CurrencyTipCalculatorProps> = ({
             <div className="relative">
               <input
                 type="number"
+                inputMode="decimal"
                 value={billEgpStr}
                 onChange={(e) => setBillEgpStr(e.target.value)}
                 placeholder="600"

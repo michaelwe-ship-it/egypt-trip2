@@ -68,10 +68,10 @@ export const SyncModal: React.FC<SyncModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900">
-                부부 2인 실시간 동기화 설정
+                부부 2인 실시간 동기화 (Firebase RTDB)
               </h3>
               <p className="text-[11px] text-slate-500">
-                10주년 여행 일정을 두 기기에서 실시간 공유
+                로그인 없이 링크 접속만으로 스마트폰 간 1초 즉시 동기화
               </p>
             </div>
           </div>
@@ -92,17 +92,17 @@ export const SyncModal: React.FC<SyncModalProps> = ({
           }`}>
             <div className="flex items-center gap-2.5">
               {status === 'CONNECTED' ? (
-                <Wifi className="w-4 h-4 text-emerald-600" />
+                <Wifi className="w-4 h-4 text-emerald-600 shrink-0" />
               ) : (
-                <WifiOff className="w-4 h-4 text-rose-600" />
+                <WifiOff className="w-4 h-4 text-rose-600 shrink-0" />
               )}
               <div>
                 <span className="font-bold text-sm">
-                  {status === 'CONNECTED' ? '실시간 동기화 서버 연결됨' : '연결 확인중'}
+                  {status === 'CONNECTED' ? 'Firebase Realtime Database 실시간 연결됨' : 'Firebase 연결 확인중'}
                 </span>
                 <p className="text-[11px] text-slate-600 mt-0.5">
                   현재 방 접속 기기: <strong className="text-slate-900 font-bold">{connectedCount}대</strong>
-                  {connectedCount >= 2 ? ' (남편 & 아내 모두 연결 완료! 💑)' : ' (배우자 접속 대기 중)'}
+                  {connectedCount >= 2 ? ' (남편 & 아내 모두 실시간 연결! 💑)' : ' (배우자 스마트폰 접속 대기 중)'}
                 </p>
               </div>
             </div>

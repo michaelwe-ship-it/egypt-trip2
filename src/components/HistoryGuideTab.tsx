@@ -46,54 +46,54 @@ export const HistoryGuideTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Sub-tab Navigation Bar */}
-      <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200 text-xs font-semibold overflow-x-auto no-scrollbar">
+      {/* Sub-tab Navigation Bar - Responsive 2x2 grid on mobile, 4-col on desktop */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 bg-slate-100 rounded-2xl border border-slate-200 text-xs font-semibold">
         <button
           onClick={() => setSubTab('HISTORY')}
-          className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 whitespace-nowrap transition ${
+          className={`py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 transition min-h-[38px] active:scale-95 ${
             subTab === 'HISTORY'
-              ? 'bg-white text-blue-700 font-bold shadow-xs'
+              ? 'bg-white text-blue-700 font-bold shadow-xs ring-1 ring-blue-600/20'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <BookOpen className="w-3.5 h-3.5" />
-          <span>역사 연대표 & 상징</span>
+          <BookOpen className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">이집트 역사·상징</span>
         </button>
 
         <button
           onClick={() => setSubTab('GIZA')}
-          className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 whitespace-nowrap transition ${
+          className={`py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 transition min-h-[38px] active:scale-95 ${
             subTab === 'GIZA'
-              ? 'bg-white text-blue-700 font-bold shadow-xs'
+              ? 'bg-white text-blue-700 font-bold shadow-xs ring-1 ring-blue-600/20'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <span>🏜️</span>
-          <span>1) 기자 피라미드 가이드</span>
+          <span className="truncate">1) 기자 피라미드</span>
         </button>
 
         <button
           onClick={() => setSubTab('GEM')}
-          className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 whitespace-nowrap transition ${
+          className={`py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 transition min-h-[38px] active:scale-95 ${
             subTab === 'GEM'
-              ? 'bg-white text-blue-700 font-bold shadow-xs'
+              ? 'bg-white text-blue-700 font-bold shadow-xs ring-1 ring-blue-600/20'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <span>🏛️</span>
-          <span>2) GEM 대박물관 동선</span>
+          <span className="truncate">2) GEM 대박물관</span>
         </button>
 
         <button
           onClick={() => setSubTab('LUXOR')}
-          className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 whitespace-nowrap transition ${
+          className={`py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 transition min-h-[38px] active:scale-95 ${
             subTab === 'LUXOR'
-              ? 'bg-white text-blue-700 font-bold shadow-xs'
+              ? 'bg-white text-blue-700 font-bold shadow-xs ring-1 ring-blue-600/20'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <span>⛵</span>
-          <span>3) 룩소르 주요 포인트</span>
+          <span className="truncate">3) 룩소르 주요포인트</span>
         </button>
       </div>
 

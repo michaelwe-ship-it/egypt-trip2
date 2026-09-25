@@ -428,7 +428,7 @@ export const BudgetDashboard: React.FC<BudgetDashboardProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
                   <label className="block text-slate-600 font-semibold mb-1">카테고리</label>
                   <select
@@ -457,6 +457,19 @@ export const BudgetDashboard: React.FC<BudgetDashboardProps> = ({
                     <option value="PREPAID">사전 결제 완료 (PREPAID)</option>
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-slate-600 font-semibold mb-1">해당 도시</label>
+                  <select
+                    value={formCity}
+                    onChange={(e) => setFormCity(e.target.value as any)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2 text-slate-900 font-semibold focus:outline-hidden focus:border-blue-600 focus:bg-white"
+                  >
+                    <option value="COMMON">공통 / 전체</option>
+                    <option value="CAIRO">카이로 (Cairo)</option>
+                    <option value="LUXOR">룩소르 (Luxor)</option>
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
@@ -464,6 +477,7 @@ export const BudgetDashboard: React.FC<BudgetDashboardProps> = ({
                   <label className="block text-slate-600 font-semibold mb-1">금액 (숫자) *</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     value={formAmount || ''}
                     onChange={(e) => setFormAmount(Number(e.target.value))}
                     placeholder="1000"

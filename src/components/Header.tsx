@@ -83,11 +83,11 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right Action buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             {/* Real-time couple sync button */}
             <button
               onClick={onOpenSyncModal}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shadow-xs ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shadow-xs min-h-[34px] ${
                 status === 'CONNECTED'
                   ? connectedCount > 1
                     ? 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100'
@@ -102,13 +102,15 @@ export const Header: React.FC<HeaderProps> = ({
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                   </span>
-                  <span>{connectedCount > 1 ? '부부 2인 동기화' : '실시간 연결됨'}</span>
+                  <span className="text-[11px] sm:text-xs font-bold">
+                    {connectedCount > 1 ? '부부 동기화' : '동기화 연결'}
+                  </span>
                   <Users className="w-3.5 h-3.5 opacity-80" />
                 </>
               ) : (
                 <>
                   <WifiOff className="w-3.5 h-3.5 text-rose-600" />
-                  <span>연결 시도중</span>
+                  <span className="text-[11px] sm:text-xs">연결중</span>
                 </>
               )}
             </button>
@@ -116,8 +118,9 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Emergency button */}
             <button
               onClick={onOpenEmergencyModal}
-              className="p-1.5 rounded-full bg-slate-100 text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition border border-slate-200"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100 text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition border border-slate-200 flex items-center justify-center shrink-0 shadow-xs"
               title="긴급 연락망 & 대사관"
+              aria-label="긴급 연락망"
             >
               <ShieldAlert className="w-4 h-4 text-rose-600" />
             </button>
@@ -127,18 +130,18 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Bottom Sub-row: Dual Time & Role Toggle */}
         <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
           {/* Dual Digital Clocks */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[13px]">🇪🇬</span>
-              <span className="text-[11px] text-slate-500 font-medium">카이로</span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1">
+              <span className="text-[12px]">🇪🇬</span>
+              <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium">카이로</span>
               <span className="font-mono text-slate-900 font-bold text-xs tracking-wider">
                 {cairoTime || '--:--'}
               </span>
             </div>
             <span className="text-slate-300">|</span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[13px]">🇰🇷</span>
-              <span className="text-[11px] text-slate-500 font-medium">서울</span>
+            <div className="flex items-center gap-1">
+              <span className="text-[12px]">🇰🇷</span>
+              <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium">서울</span>
               <span className="font-mono text-slate-700 font-semibold text-xs tracking-wider">
                 {seoulTime || '--:--'}
               </span>
@@ -146,10 +149,10 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Role selector pill */}
-          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200">
+          <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-xl border border-slate-200">
             <button
               onClick={() => setUserRole('HUSBAND')}
-              className={`px-2.5 py-0.5 rounded-lg text-[11px] font-semibold transition ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition min-h-[28px] ${
                 userRole === 'HUSBAND'
                   ? 'bg-white text-blue-700 font-bold shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -159,7 +162,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
             <button
               onClick={() => setUserRole('WIFE')}
-              className={`px-2.5 py-0.5 rounded-lg text-[11px] font-semibold transition ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition min-h-[28px] ${
                 userRole === 'WIFE'
                   ? 'bg-white text-blue-700 font-bold shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'

@@ -85,39 +85,39 @@ export const QuickInfoCards: React.FC<QuickInfoCardsProps> = ({
   return (
     <div className="space-y-4 max-w-4xl mx-auto">
       {/* Sub Tabs */}
-      <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200 text-xs font-semibold">
+      <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200 text-xs font-semibold">
         <button
           onClick={() => setSubTab('TICKETS')}
-          className={`flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 transition ${
+          className={`py-2.5 px-1 rounded-xl flex items-center justify-center gap-1 transition min-h-[40px] active:scale-95 ${
             subTab === 'TICKETS'
-              ? 'bg-white text-blue-700 font-bold shadow-xs'
+              ? 'bg-white text-blue-700 font-bold shadow-xs ring-1 ring-blue-600/20'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Ticket className="w-3.5 h-3.5" />
-          <span>입장료 & 예약 정보</span>
+          <Ticket className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">입장료·예약</span>
         </button>
         <button
           onClick={() => setSubTab('DRIVERS')}
-          className={`flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 transition ${
+          className={`py-2.5 px-1 rounded-xl flex items-center justify-center gap-1 transition min-h-[40px] active:scale-95 ${
             subTab === 'DRIVERS'
-              ? 'bg-white text-blue-700 font-bold shadow-xs'
+              ? 'bg-white text-blue-700 font-bold shadow-xs ring-1 ring-blue-600/20'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Car className="w-3.5 h-3.5" />
-          <span>택시 / 기사 연락망</span>
+          <Car className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">기사 연락처</span>
         </button>
         <button
           onClick={() => setSubTab('ARABIC')}
-          className={`flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 transition ${
+          className={`py-2.5 px-1 rounded-xl flex items-center justify-center gap-1 transition min-h-[40px] active:scale-95 ${
             subTab === 'ARABIC'
-              ? 'bg-white text-blue-700 font-bold shadow-xs'
+              ? 'bg-white text-blue-700 font-bold shadow-xs ring-1 ring-blue-600/20'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Languages className="w-3.5 h-3.5" />
-          <span>생존 아랍어 & 팁</span>
+          <Languages className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">생존 아랍어</span>
         </button>
       </div>
 
