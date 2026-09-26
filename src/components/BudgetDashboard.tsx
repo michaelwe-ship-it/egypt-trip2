@@ -8,16 +8,16 @@ import {
   Circle, 
   Edit3, 
   Trash2, 
-  DollarSign, 
   PieChart, 
-  Sparkles,
   Plane,
   Building,
   Ticket,
   UtensilsCrossed,
   Car,
   Gift,
-  Coins
+  Coins,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { formatCurrency, convertAmount, DEFAULT_RATES, ExchangeRates } from '../services/currency';
 
@@ -37,6 +37,7 @@ export const BudgetDashboard: React.FC<BudgetDashboardProps> = ({
   const [timingFilter, setTimingFilter] = useState<'ALL' | 'PREPAID' | 'ONSITE'>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BudgetItem | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 
   // Form states
   const [formTitle, setFormTitle] = useState('');
@@ -44,14 +45,9 @@ export const BudgetDashboard: React.FC<BudgetDashboardProps> = ({
   const [formTiming, setFormTiming] = useState<PaymentTiming>('ONSITE');
   const [formCurrency, setFormCurrency] = useState<Currency>('EGP');
   const [formAmount, setFormAmount] = useState<number>(0);
-  const [formPaidAmount, setFormPaidAmount] = useState<number>(0);
   const [formIsPaid, setFormIsPaid] = useState<boolean>(false);
   const [formCity, setFormCity] = useState<'CAIRO' | 'LUXOR' | 'COMMON'>('COMMON');
   const [formMemo, setFormMemo] = useState('');
-
-  // Cash in hand tracker settings (USD cash & EGP cash)
-  const [totalUsdCash, setTotalUsdCash] = useState<number>(1000); // e.g. brought $1,000 in cash
-  const [totalEgpCash, setTotalEgpCash] = useState<number>(5000); // e.g. exchanged 5,000 EGP
 
   // Filter items
   const filteredBudget = budget.filter((item) => {
@@ -78,9 +74,6 @@ export const BudgetDashboard: React.FC<BudgetDashboardProps> = ({
       onsiteKrw += krw;
       if (item.currency === 'USD') onsiteUsdTotal += item.amount;
       if (item.currency === 'EGP') onsiteEgpTotal += item.amount;
-      if (item.currency === 'KRW') {
-        // also count converted equivalent for estimation
-      }
     }
 
     if (item.isPaid) {
@@ -88,7 +81,8 @@ export const BudgetDashboard: React.FC<BudgetDashboardProps> = ({
     }
   }
 
-  const handleTogglePaid = (id: string) => {
+  const handleTogglePaid = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
     const updated = budget.map((b) => {
       if (b.id === id) {
         const nextPaid = !b.isPaid;
@@ -103,20 +97,21 @@ export const BudgetDashboard: React.FC<BudgetDashboardProps> = ({
     onUpdateBudget(updated);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
     if (confirm('이 예산 항목을 삭제하시겠습니까?')) {
       onUpdateBudget(budget.filter(b => b.id !== id));
     }
   };
 
-  const handleOpenEdit = (item: BudgetItem) => {
+  const handleOpenEdit = (e: React.MouseEvent, item: BudgetItem) => {
+    e.stopPropagation();
     setEditingItem(item);
     setFormTitle(item.title);
     setFormCategory(item.category);
     setFormTiming(item.timing);
     setFormCurrency(item.currency);
     setFormAmount(item.amount);
-    setFormPaidAmount(item.paidAmount || 0);
     setFormIsPaid(item.isPaid);
     setFormCity(item.city);
     setFormMemo(item.memo || '');
@@ -130,7 +125,6 @@ export const BudgetDashboard: React.FC<BudgetDashboardProps> = ({
     setFormTiming('ONSITE');
     setFormCurrency('EGP');
     setFormAmount(0);
-    setFormPaidAmount(0);
     setFormIsPaid(false);
     setFormCity(selectedCity === 'ALL' ? 'COMMON' : selectedCity);
     setFormMemo('');
@@ -139,10 +133,7 @@ export const BudgetDashboard: React.FC<BudgetDashboardProps> = ({
 
   const handleSaveForm = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formTitle.trim() || formAmount <= 0) {
-      alert('항목명과 유효한 금액을 입력해주세요.');
-      return;
-    }
+    if (!formTitle.trim() || formAmount <= 0) return;
 
     if (editingItem) {
       const updated = budget.map((b) => {
@@ -185,90 +176,77 @@ export const BudgetDashboard: React.FC<BudgetDashboardProps> = ({
   const getCategoryBadge = (cat: BudgetCategory) => {
     switch (cat) {
       case 'FLIGHT': return { label: '항공권', icon: <Plane className="w-3 h-3" /> };
-      case 'HOTEL': return { label: '호텔숙소', icon: <Building className="w-3 h-3" /> };
-      case 'TOUR_ENTRY': return { label: '투어/입장료', icon: <Ticket className="w-3 h-3" /> };
-      case 'FOOD': return { label: '식비/카페', icon: <UtensilsCrossed className="w-3 h-3" /> };
-      case 'TRANSPORT': return { label: '택시/교통', icon: <Car className="w-3 h-3" /> };
-      case 'SHOPPING': return { label: '쇼핑/기념품', icon: <Gift className="w-3 h-3" /> };
-      case 'TIPS_MISC': return { label: '팁/기타', icon: <Coins className="w-3 h-3" /> };
+      case 'HOTEL': return { label: '숙소', icon: <Building className="w-3 h-3" /> };
+      case 'TOUR_ENTRY': return { label: '투어·입장료', icon: <Ticket className="w-3 h-3" /> };
+      case 'FOOD': return { label: '식비·카페', icon: <UtensilsCrossed className="w-3 h-3" /> };
+      case 'TRANSPORT': return { label: '교통', icon: <Car className="w-3 h-3" /> };
+      case 'SHOPPING': return { label: '쇼핑', icon: <Gift className="w-3 h-3" /> };
+      case 'TIPS_MISC': return { label: '팁·기타', icon: <Coins className="w-3 h-3" /> };
     }
   };
 
   return (
-    <div className="space-y-5 max-w-4xl mx-auto">
-      {/* 1. Summary Cards Dashboard */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div className="space-y-4 max-w-4xl mx-auto">
+      {/* 1. Compact Summary Dashboard */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
         {/* Total Estimated Budget */}
-        <div className="p-4 rounded-3xl bg-blue-600 text-white shadow-xs">
+        <div className="col-span-2 sm:col-span-1 p-3.5 rounded-2xl bg-blue-600 text-white shadow-2xs">
           <div className="flex items-center justify-between text-xs text-blue-100">
             <span className="font-semibold flex items-center gap-1">
               <PieChart className="w-3.5 h-3.5 text-blue-200" />
-              총 예상 여행 경비
+              총 예상 경비 (2인)
             </span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20 text-white font-bold">
-              부부 2인 전체
+            <span className="text-[11px] font-mono text-blue-100">
+              결제율 {Math.round((actualPaidKrw / totalKrwAll) * 100) || 0}%
             </span>
           </div>
-          <div className="text-2xl font-black font-mono mt-1 tracking-tight text-white">
+          <div className="text-xl font-black font-mono mt-1 tracking-tight text-white">
             약 {Math.round(totalKrwAll).toLocaleString()}원
           </div>
-          <div className="text-[11px] text-blue-100 mt-1 flex items-center justify-between">
-            <span>실제 결제 완료:</span>
-            <span className="font-bold text-white font-mono">
-              {Math.round(actualPaidKrw).toLocaleString()}원 ({Math.round((actualPaidKrw / totalKrwAll) * 100) || 0}%)
-            </span>
+          <div className="text-[11px] text-blue-100 mt-0.5 font-mono">
+            완료: {Math.round(actualPaidKrw).toLocaleString()}원
           </div>
         </div>
 
-        {/* 1. Prepaid Completed */}
-        <div className="p-4 rounded-3xl bg-white border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-xs text-slate-600">
-            <span className="font-semibold flex items-center gap-1">
-              <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
-              1. 사전 결제 완료
-            </span>
-            <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
-              항공 · 호텔
-            </span>
+        {/* Prepaid Completed */}
+        <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
+          <div className="flex items-center gap-1 text-xs text-slate-500 font-semibold">
+            <CreditCard className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span className="truncate">사전 결제</span>
           </div>
-          <div className="text-xl font-black text-slate-900 font-mono mt-1">
+          <div className="text-base sm:text-lg font-black text-slate-900 font-mono mt-1 truncate">
             {Math.round(prepaidKrw).toLocaleString()}원
           </div>
-          <p className="text-[10px] text-slate-500 mt-1">
-            국제선 왕복 + 국내선 2회 + 5성급 호텔
+          <p className="text-[10px] text-slate-400 mt-0.5 truncate">
+            항공 · 5성급 호텔
           </p>
         </div>
 
-        {/* 2. Onsite Budget Requirements (USD + EGP combined) */}
-        <div className="p-4 rounded-3xl bg-white border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-xs text-slate-600">
-            <span className="font-semibold flex items-center gap-1">
-              <Wallet className="w-3.5 h-3.5 text-amber-600" />
-              2. 현지 지불 예정 경비
-            </span>
-            <span className="text-[10px] text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded-full">
-              달러 + EGP
-            </span>
+        {/* Onsite Budget Requirements */}
+        <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
+          <div className="flex items-center gap-1 text-xs text-slate-500 font-semibold">
+            <Wallet className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span className="truncate">현지 지불 예정</span>
           </div>
-          <div className="text-xl font-black text-slate-900 font-mono mt-1">
+          <div className="text-base sm:text-lg font-black text-slate-900 font-mono mt-1 truncate">
             약 {Math.round(onsiteKrw).toLocaleString()}원
           </div>
-          <div className="text-[11px] text-slate-700 font-mono mt-1 flex items-center gap-2">
-            <span className="text-blue-700 font-bold">${onsiteUsdTotal}</span>
-            <span className="text-slate-400">+</span>
-            <span className="text-amber-800 font-bold">{onsiteEgpTotal.toLocaleString()} EGP</span>
+          <div className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">
+            <span className="text-blue-600 font-bold">${onsiteUsdTotal}</span>
+            <span> + </span>
+            <span className="text-amber-700 font-bold">{onsiteEgpTotal.toLocaleString()} EGP</span>
           </div>
         </div>
       </div>
 
       {/* 2. Timing Filter & Add Button */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-semibold">
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold">
           <button
             onClick={() => setTimingFilter('ALL')}
-            className={`px-3 py-1.5 rounded-xl transition ${
+            className={`px-2.5 py-1.5 rounded-lg transition ${
               timingFilter === 'ALL'
-                ? 'bg-white text-blue-700 font-bold shadow-xs'
+                ? 'bg-white text-blue-700 font-bold shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -276,132 +254,142 @@ export const BudgetDashboard: React.FC<BudgetDashboardProps> = ({
           </button>
           <button
             onClick={() => setTimingFilter('PREPAID')}
-            className={`px-3 py-1.5 rounded-xl transition ${
+            className={`px-2.5 py-1.5 rounded-lg transition ${
               timingFilter === 'PREPAID'
-                ? 'bg-white text-blue-700 font-bold shadow-xs'
+                ? 'bg-white text-blue-700 font-bold shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            사전 결제 완료 ({budget.filter(b => b.timing === 'PREPAID').length})
+            사전결제 ({budget.filter(b => b.timing === 'PREPAID').length})
           </button>
           <button
             onClick={() => setTimingFilter('ONSITE')}
-            className={`px-3 py-1.5 rounded-xl transition ${
+            className={`px-2.5 py-1.5 rounded-lg transition ${
               timingFilter === 'ONSITE'
-                ? 'bg-white text-blue-700 font-bold shadow-xs'
+                ? 'bg-white text-blue-700 font-bold shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            현지 지불 예정 ({budget.filter(b => b.timing === 'ONSITE').length})
+            현지지불 ({budget.filter(b => b.timing === 'ONSITE').length})
           </button>
         </div>
 
         <button
           onClick={handleOpenAdd}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-2xs transition"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>지출 항목 추가</span>
+          <span>항목 추가</span>
         </button>
       </div>
 
       {/* 3. Budget Items List */}
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         {filteredBudget.map((item) => {
           const cat = getCategoryBadge(item.category);
           const krwVal = convertAmount(item.amount, item.currency, 'KRW', rates);
+          const isOpen = expandedIds[item.id] ?? false;
 
           return (
             <div
               key={item.id}
-              className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+              onClick={() =>
+                item.memo &&
+                setExpandedIds((prev) => ({ ...prev, [item.id]: !isOpen }))
+              }
+              className={`p-3 rounded-2xl border transition-all ${
+                item.memo ? 'cursor-pointer' : ''
+              } ${
                 item.isPaid
                   ? 'bg-slate-50/80 border-slate-200 opacity-65'
-                  : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+                  : 'bg-white border-slate-200/90 hover:border-slate-300 shadow-2xs'
               }`}
             >
-              <div className="flex items-center gap-3">
-                {/* Complete / Paid Toggle */}
-                <button
-                  onClick={() => handleTogglePaid(item.id)}
-                  className={`p-1 rounded-full transition ${
-                    item.isPaid
-                      ? 'text-emerald-600 hover:text-emerald-700'
-                      : 'text-slate-400 hover:text-blue-600'
-                  }`}
-                  title={item.isPaid ? '결제 취소' : '결제 완료 표시'}
-                >
-                  {item.isPaid ? (
-                    <CheckCircle2 className="w-5 h-5 fill-emerald-100" />
-                  ) : (
-                    <Circle className="w-5 h-5" />
-                  )}
-                </button>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <button
+                    onClick={(e) => handleTogglePaid(e, item.id)}
+                    className={`p-0.5 rounded-full transition shrink-0 ${
+                      item.isPaid
+                        ? 'text-emerald-600 hover:text-emerald-700'
+                        : 'text-slate-400 hover:text-blue-600'
+                    }`}
+                    title={item.isPaid ? '결제 취소' : '결제 완료 표시'}
+                  >
+                    {item.isPaid ? (
+                      <CheckCircle2 className="w-5 h-5 fill-emerald-100" />
+                    ) : (
+                      <Circle className="w-5 h-5" />
+                    )}
+                  </button>
 
-                <div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1 font-medium">
-                      {cat.icon}
-                      <span>{cat.label}</span>
-                    </span>
-
-                    <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${
-                      item.timing === 'PREPAID'
-                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                        : 'bg-amber-50 text-amber-800 border border-amber-200'
-                    }`}>
-                      {item.timing === 'PREPAID' ? '사전결제' : '현지지불'}
-                    </span>
-
-                    {item.city !== 'COMMON' && (
-                      <span className="text-[10px] text-slate-500 font-medium">
-                        ({item.city === 'CAIRO' ? '카이로' : item.city === 'LUXOR' ? '룩소르' : item.city})
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                      <span className="inline-flex items-center gap-1 font-medium text-slate-600">
+                        {cat.icon}
+                        <span>{cat.label}</span>
                       </span>
+                      <span aria-hidden="true">·</span>
+                      <span className={item.timing === 'PREPAID' ? 'text-emerald-700 font-semibold' : 'text-amber-700 font-semibold'}>
+                        {item.timing === 'PREPAID' ? '사전결제' : '현지지불'}
+                      </span>
+                      {item.city !== 'COMMON' && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span>{item.city === 'CAIRO' ? '카이로' : '룩소르'}</span>
+                        </>
+                      )}
+                    </div>
+
+                    <h4 className={`text-sm font-bold mt-0.5 truncate ${item.isPaid ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                      {item.title}
+                    </h4>
+                  </div>
+                </div>
+
+                {/* Amount & Actions */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="text-right font-mono">
+                    <div className="text-sm font-black text-slate-900">
+                      {formatCurrency(item.amount, item.currency)}
+                    </div>
+                    {item.currency !== 'KRW' && (
+                      <div className="text-[10px] text-slate-500">
+                        약 {Math.round(krwVal).toLocaleString()}원
+                      </div>
                     )}
                   </div>
 
-                  <h4 className={`text-sm font-bold mt-1 ${item.isPaid ? 'line-through text-slate-400' : 'text-slate-900'}`}>
-                    {item.title}
-                  </h4>
-
                   {item.memo && (
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {item.memo}
-                    </p>
+                    <span className="text-slate-400">
+                      {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </span>
                   )}
-                </div>
-              </div>
 
-              {/* Amount & Actions */}
-              <div className="flex items-center gap-3 shrink-0">
-                <div className="text-right font-mono">
-                  <div className="text-sm font-black text-slate-900">
-                    {formatCurrency(item.amount, item.currency)}
+                  <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={(e) => handleOpenEdit(e, item)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition"
+                      title="수정"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => handleDelete(e, item.id)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                      title="삭제"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                  {item.currency !== 'KRW' && (
-                    <div className="text-[11px] text-slate-500">
-                      약 {Math.round(krwVal).toLocaleString()}원
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleOpenEdit(item)}
-                    className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition"
-                    title="수정"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                    title="삭제"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
                 </div>
               </div>
+
+              {item.memo && isOpen && (
+                <div className="mt-2 pt-2 border-t border-slate-100 text-xs text-slate-600 pl-7 leading-relaxed">
+                  {item.memo}
+                </div>
+              )}
             </div>
           );
         })}
