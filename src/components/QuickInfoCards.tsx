@@ -12,7 +12,9 @@ import {
   Languages,
   ChevronDown,
   ChevronUp,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Edit3,
+  Trash2
 } from 'lucide-react';
 import { convertAmount, DEFAULT_RATES } from '../services/currency';
 
@@ -169,6 +171,7 @@ export const QuickInfoCards: React.FC<QuickInfoCardsProps> = ({
 }) => {
   const [subTab, setSubTab] = useState<'TICKETS' | 'DRIVERS' | 'ARABIC'>('TICKETS');
   const [isAddDriverOpen, setIsAddDriverOpen] = useState(false);
+  const [editingDriver, setEditingDriver] = useState<DriverContact | null>(null);
   const [newDriverName, setNewDriverName] = useState('');
   const [newDriverCity, setNewDriverCity] = useState('카이로 / 룩소르');
   const [newDriverPhone, setNewDriverPhone] = useState('');
@@ -193,31 +196,68 @@ export const QuickInfoCards: React.FC<QuickInfoCardsProps> = ({
     return t.city === selectedCity;
   });
 
-  const handleAddDriver = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newDriverName.trim() || !newDriverPhone.trim()) return;
-
-    const cleanWa = newDriverWhatsApp.replace(/[^0-9]/g, '') || newDriverPhone.replace(/[^0-9]/g, '');
-
-    const newDriver: DriverContact = {
-      id: `driver_${Date.now()}`,
-      name: newDriverName.trim(),
-      city: newDriverCity.trim(),
-      phone: newDriverPhone.trim(),
-      whatsapp: cleanWa,
-      recommendedRoute: newDriverRoute.trim() || '시내 투어 및 공항 픽업',
-      estimatedPrice: newDriverPrice.trim() || '상호 협의',
-      notes: newDriverNotes.trim() || '추천 기사',
-    };
-
-    onUpdateDrivers([...drivers, newDriver]);
-    setIsAddDriverOpen(false);
+  const handleOpenAddDriver = () => {
+    setEditingDriver(null);
     setNewDriverName('');
+    setNewDriverCity('카이로 / 룩소르');
     setNewDriverPhone('');
     setNewDriverWhatsApp('');
     setNewDriverRoute('');
     setNewDriverPrice('');
     setNewDriverNotes('');
+    setIsAddDriverOpen(true);
+  };
+
+  const handleOpenEditDriver = (driver: DriverContact) => {
+    setEditingDriver(driver);
+    setNewDriverName(driver.name);
+    setNewDriverCity(driver.city);
+    setNewDriverPhone(driver.phone);
+    setNewDriverWhatsApp(driver.whatsapp);
+    setNewDriverRoute(driver.recommendedRoute);
+    setNewDriverPrice(driver.estimatedPrice);
+    setNewDriverNotes(driver.notes || '');
+    setIsAddDriverOpen(true);
+  };
+
+  const handleSaveDriver = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDriverName.trim() || !newDriverPhone.trim()) return;
+
+    const cleanWa = newDriverWhatsApp.replace(/[^0-9]/g, '') || newDriverPhone.replace(/[^0-9]/g, '');
+
+    if (editingDriver) {
+      const updated = drivers.map((d) =>
+        d.id === editingDriver.id
+          ? {
+              ...d,
+              name: newDriverName.trim(),
+              city: newDriverCity.trim() || '카이로 / 룩소르',
+              phone: newDriverPhone.trim(),
+              whatsapp: cleanWa,
+              recommendedRoute: newDriverRoute.trim() || '시내 투어 및 공항 픽업',
+              estimatedPrice: newDriverPrice.trim() || '상호 협의',
+              notes: newDriverNotes.trim() || '추천 기사',
+            }
+          : d
+      );
+      onUpdateDrivers(updated);
+    } else {
+      const newDriver: DriverContact = {
+        id: `driver_${Date.now()}`,
+        name: newDriverName.trim(),
+        city: newDriverCity.trim() || '카이로 / 룩소르',
+        phone: newDriverPhone.trim(),
+        whatsapp: cleanWa,
+        recommendedRoute: newDriverRoute.trim() || '시내 투어 및 공항 픽업',
+        estimatedPrice: newDriverPrice.trim() || '상호 협의',
+        notes: newDriverNotes.trim() || '추천 기사',
+      };
+      onUpdateDrivers([...drivers, newDriver]);
+    }
+
+    setIsAddDriverOpen(false);
+    setEditingDriver(null);
   };
 
   const handleDeleteDriver = (id: string) => {
@@ -403,7 +443,7 @@ export const QuickInfoCards: React.FC<QuickInfoCardsProps> = ({
                 <span>{expandAllDrivers ? '접기' : '상세 펼치기'}</span>
               </button>
               <button
-                onClick={() => setIsAddDriverOpen(true)}
+                onClick={handleOpenAddDriver}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-2xs hover:bg-blue-700 transition"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -433,13 +473,24 @@ export const QuickInfoCards: React.FC<QuickInfoCardsProps> = ({
                         </h3>
                       </div>
 
-                      <button
-                        onClick={() => handleDeleteDriver(driver.id)}
-                        className="text-slate-400 hover:text-rose-600 text-xs px-1.5 py-0.5 rounded hover:bg-rose-50"
-                        title="삭제"
-                      >
-                        ×
-                      </button>
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          onClick={() => handleOpenEditDriver(driver)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition"
+                          title="기사 정보 수정"
+                          aria-label="수정"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteDriver(driver.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                          title="기사 연락처 삭제"
+                          aria-label="삭제"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Key Price Summary + Expand Trigger */}
@@ -502,12 +553,14 @@ export const QuickInfoCards: React.FC<QuickInfoCardsProps> = ({
             })}
           </div>
 
-          {/* Add Driver Modal */}
+          {/* Add / Edit Driver Modal */}
           {isAddDriverOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
               <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-5 shadow-2xl text-slate-900">
-                <h3 className="text-sm font-bold text-slate-900 mb-3">새 기사 / 택시 연락처 등록</h3>
-                <form onSubmit={handleAddDriver} className="space-y-3 text-xs">
+                <h3 className="text-sm font-bold text-slate-900 mb-3">
+                  {editingDriver ? '기사 연락처 수정' : '새 기사 / 택시 연락처 등록'}
+                </h3>
+                <form onSubmit={handleSaveDriver} className="space-y-3 text-xs">
                   <div>
                     <label className="block text-slate-600 font-semibold mb-1">기사님 성함 *</label>
                     <input
@@ -542,18 +595,30 @@ export const QuickInfoCards: React.FC<QuickInfoCardsProps> = ({
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-slate-600 font-semibold mb-1">WhatsApp 번호 (숫자만, 국가코드 포함)</label>
-                    <input
-                      type="text"
-                      value={newDriverWhatsApp}
-                      onChange={(e) => setNewDriverWhatsApp(e.target.value)}
-                      placeholder="201001234567"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-mono focus:outline-hidden focus:border-blue-600 focus:bg-white"
-                    />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-slate-600 font-semibold mb-1">WhatsApp 번호 (숫자만)</label>
+                      <input
+                        type="text"
+                        value={newDriverWhatsApp}
+                        onChange={(e) => setNewDriverWhatsApp(e.target.value)}
+                        placeholder="201001234567"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-mono focus:outline-hidden focus:border-blue-600 focus:bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-600 font-semibold mb-1">예상 요금</label>
+                      <input
+                        type="text"
+                        value={newDriverPrice}
+                        onChange={(e) => setNewDriverPrice(e.target.value)}
+                        placeholder="예: $25~35 / 1,000 EGP"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-hidden focus:border-blue-600 focus:bg-white"
+                      />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-slate-600 font-semibold mb-1">추천 코스 및 예상 요금</label>
+                    <label className="block text-slate-600 font-semibold mb-1">추천 코스</label>
                     <input
                       type="text"
                       value={newDriverRoute}
@@ -575,7 +640,10 @@ export const QuickInfoCards: React.FC<QuickInfoCardsProps> = ({
                   <div className="pt-2 flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setIsAddDriverOpen(false)}
+                      onClick={() => {
+                        setIsAddDriverOpen(false);
+                        setEditingDriver(null);
+                      }}
                       className="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
                     >
                       취소
@@ -584,7 +652,7 @@ export const QuickInfoCards: React.FC<QuickInfoCardsProps> = ({
                       type="submit"
                       className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold"
                     >
-                      저장하기
+                      {editingDriver ? '수정 완료' : '저장하기'}
                     </button>
                   </div>
                 </form>
