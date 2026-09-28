@@ -222,16 +222,49 @@ export default function App() {
 
   // Itinerary CRUD actions with Real-time Broadcast
   const handleSaveItineraryItem = (item: ItineraryItem) => {
+    const existingItem = itinerary.find(i => i.id === item.id);
     let updated: ItineraryItem[];
-    const exists = itinerary.some(i => i.id === item.id);
-    if (exists) {
-      updated = itinerary.map(i => i.id === item.id ? item : i);
+
+    if (existingItem) {
+      const timeOrDayChanged =
+        existingItem.time !== item.time || existingItem.dayNumber !== item.dayNumber;
+      updated = itinerary.map(i => (i.id === item.id ? item : i));
+
+      if (timeOrDayChanged) {
+        // Re-sort the target day's items by time while preserving other days' order
+        updated = [1, 2, 3, 4, 5, 6].flatMap((day) => {
+          const dayList = updated.filter(i => i.dayNumber === day);
+          if (day === item.dayNumber) {
+            return [...dayList].sort((a, b) => a.time.localeCompare(b.time));
+          }
+          return dayList;
+        });
+      }
     } else {
-      updated = [...itinerary, item];
+      const appended = [...itinerary, item];
+      updated = [1, 2, 3, 4, 5, 6].flatMap((day) => {
+        const dayList = appended.filter(i => i.dayNumber === day);
+        if (day === item.dayNumber) {
+          return [...dayList].sort((a, b) => a.time.localeCompare(b.time));
+        }
+        return dayList;
+      });
     }
+
     setItinerary(updated);
+    setIsItineraryModalOpen(false);
+    setEditingItem(null);
+
     if (syncServiceRef.current) {
       syncServiceRef.current.updateItinerary(updated);
+    }
+    showToast(existingItem ? '✅ 일정이 수정되었습니다' : '✅ 새 일정이 시간에 맞춰 추가되었습니다');
+  };
+
+  const handleReorderItinerary = (reorderedItems: ItineraryItem[]) => {
+    setItinerary(reorderedItems);
+    if (syncServiceRef.current) {
+      syncServiceRef.current.updateItinerary(reorderedItems);
     }
   };
 
@@ -372,6 +405,7 @@ export default function App() {
                 }}
                 onDeleteItem={handleDeleteItineraryItem}
                 onToggleStatus={handleToggleItineraryStatus}
+                onReorderItems={handleReorderItinerary}
               />
             ) : (
               <ItineraryDetailed
@@ -388,6 +422,7 @@ export default function App() {
                 }}
                 onDeleteItem={handleDeleteItineraryItem}
                 onToggleStatus={handleToggleItineraryStatus}
+                onReorderItems={handleReorderItinerary}
               />
             )}
           </>

@@ -84,37 +84,6 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right Action buttons */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {/* Real-time couple sync button */}
-            <button
-              onClick={onOpenSyncModal}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shadow-xs min-h-[34px] ${
-                status === 'CONNECTED'
-                  ? connectedCount > 1
-                    ? 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100'
-                    : 'bg-blue-50 border-blue-300 text-blue-800 hover:bg-blue-100'
-                  : 'bg-rose-50 border-rose-300 text-rose-800 hover:bg-rose-100'
-              }`}
-              title="부부 실시간 동기화 설정"
-            >
-              {status === 'CONNECTED' ? (
-                <>
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  <span className="text-[11px] sm:text-xs font-bold">
-                    {connectedCount > 1 ? '부부 동기화' : '동기화 연결'}
-                  </span>
-                  <Users className="w-3.5 h-3.5 opacity-80" />
-                </>
-              ) : (
-                <>
-                  <WifiOff className="w-3.5 h-3.5 text-rose-600" />
-                  <span className="text-[11px] sm:text-xs">연결중</span>
-                </>
-              )}
-            </button>
-
             {/* Emergency button */}
             <button
               onClick={onOpenEmergencyModal}

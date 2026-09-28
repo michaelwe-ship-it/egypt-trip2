@@ -23,7 +23,13 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
-  ChevronsUpDown
+  ChevronsUpDown,
+  BedDouble,
+  ExternalLink,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown
 } from 'lucide-react';
 import { formatCurrency, convertAmount, DEFAULT_RATES } from '../services/currency';
 
@@ -34,16 +40,79 @@ interface ItineraryTimelineProps {
   onEditItem: (item: ItineraryItem) => void;
   onDeleteItem: (id: string) => void;
   onToggleStatus: (id: string) => void;
+  onReorderItems?: (items: ItineraryItem[]) => void;
 }
 
-export const DAYS_INFO = [
-  { day: 1, dateStr: '10/28 (수)', title: '인천 출발 → 카이로 도착 · 메나하우스' },
-  { day: 2, dateStr: '10/29 (목)', title: '기자 피라미드 · 대박물관(GEM) · 시장' },
-  { day: 3, dateStr: '10/30 (금)', title: '룩소르 이동(MS074) · 힐튼 · 카르나크 신전' },
-  { day: 4, dateStr: '10/31 (토)', title: '룩소르 서안투어 · 왕가의 계곡 · 펠루카' },
-  { day: 5, dateStr: '11/1 (일)', title: '룩소르 시장 · 카이로 복귀(MS075) · 르메르디안' },
-  { day: 6, dateStr: '11/2 (월)', title: '동굴교회 · 시타델 · 올드카이로 · 귀국(QR1302)' },
+export interface DayInfo {
+  day: number;
+  dateStr: string;
+  title: string;
+  hotelName: string;
+  hotelQuery: string;
+  hotelBadge: string;
+  hotelNote: string;
+}
+
+export const DAYS_INFO: DayInfo[] = [
+  {
+    day: 1,
+    dateStr: '10/28 (수)',
+    title: '인천 출발 → 카이로 도착 · 메나하우스',
+    hotelName: 'Marriott Mena House, Cairo (메리어트 메나 하우스)',
+    hotelQuery: 'Marriott Mena House, Cairo',
+    hotelBadge: '카이로 · 1박차 체크인',
+    hotelNote: '기자 피라미드 바로 앞 5성급 역사적 궁전 호텔',
+  },
+  {
+    day: 2,
+    dateStr: '10/29 (목)',
+    title: '기자 피라미드 · 대박물관(GEM) · 시장',
+    hotelName: 'Marriott Mena House, Cairo (메리어트 메나 하우스)',
+    hotelQuery: 'Marriott Mena House, Cairo',
+    hotelBadge: '카이로 · 2박 연박',
+    hotelNote: '피라미드 뷰 조식 및 투어 후 복귀 휴식',
+  },
+  {
+    day: 3,
+    dateStr: '10/30 (금)',
+    title: '룩소르 이동(MS074) · 힐튼 · 카르나크 신전',
+    hotelName: 'Hilton Luxor Resort & Spa (힐튼 룩소르 리조트)',
+    hotelQuery: 'Hilton Luxor Resort & Spa',
+    hotelBadge: '룩소르 · 1박차 체크인',
+    hotelNote: '나일강 동안 인피니티풀 5성급 럭셔리 리조트',
+  },
+  {
+    day: 4,
+    dateStr: '10/31 (토)',
+    title: '룩소르 서안투어 · 왕가의 계곡 · 펠루카',
+    hotelName: 'Hilton Luxor Resort & Spa (힐튼 룩소르 리조트)',
+    hotelQuery: 'Hilton Luxor Resort & Spa',
+    hotelBadge: '룩소르 · 2박 연박',
+    hotelNote: '서안 투어 후 리조트 나일강 선착장 펠루카 탑승',
+  },
+  {
+    day: 5,
+    dateStr: '11/1 (일)',
+    title: '룩소르 시장 · 카이로 복귀(MS075) · 르메르디안',
+    hotelName: 'Le Méridien Cairo Airport (르 메르디앙 카이로 공항)',
+    hotelQuery: 'Le Méridien Cairo Airport',
+    hotelBadge: '카이로 공항 · 1박 체크인',
+    hotelNote: '카이로 국제공항 제3터미널 전용 다리로 직결된 5성급 호텔',
+  },
+  {
+    day: 6,
+    dateStr: '11/2 (월)',
+    title: '동굴교회 · 시타델 · 올드카이로 · 귀국(QR1302)',
+    hotelName: '기내 숙박 / 귀국일 (거점: Le Méridien Cairo Airport)',
+    hotelQuery: 'Le Méridien Cairo Airport',
+    hotelBadge: '귀국일 · 호텔 짐 보관 후 출국',
+    hotelNote: '르 메르디앙 벨데스크 짐 보관 후 시내 투어 → 저녁 공항 이동',
+  },
 ];
+
+export const getGoogleMapsUrl = (locationText: string) => {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationText)}`;
+};
 
 export const getTransportIcon = (type?: TransportType) => {
   switch (type) {
@@ -80,11 +149,16 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
   onEditItem,
   onDeleteItem,
   onToggleStatus,
+  onReorderItems,
 }) => {
-  const [activeDay, setActiveDay] = useState<number>(1); // Default to DAY 1 for clean focus
+  const [activeDay, setActiveDay] = useState<number>(1);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [expandAll, setExpandAll] = useState<boolean>(false);
+
+  // Drag and drop state
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
 
   const handleCopyLocation = (e: React.MouseEvent, id: string, text: string) => {
     e.stopPropagation();
@@ -106,6 +180,104 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
     setExpandedIds({});
   };
 
+  // Sort items by time for active day (or all days)
+  const handleSortByTime = () => {
+    if (!onReorderItems) return;
+    const sorted = [1, 2, 3, 4, 5, 6].flatMap((d) => {
+      const dayList = items.filter((i) => i.dayNumber === d);
+      if (activeDay === 0 || activeDay === d) {
+        return [...dayList].sort((a, b) => a.time.localeCompare(b.time));
+      }
+      return dayList;
+    });
+    onReorderItems(sorted);
+  };
+
+  // Move item up or down within filtered list
+  const handleMoveStep = (e: React.MouseEvent, itemId: string, direction: 'UP' | 'DOWN') => {
+    e.stopPropagation();
+    if (!onReorderItems) return;
+
+    const currentFiltered = items.filter((item) => {
+      if (selectedCity !== 'ALL' && item.city !== selectedCity) return false;
+      if (activeDay !== 0 && item.dayNumber !== activeDay) return false;
+      return true;
+    });
+
+    const idx = currentFiltered.findIndex((i) => i.id === itemId);
+    if (idx === -1) return;
+    const targetIdx = direction === 'UP' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= currentFiltered.length) return;
+
+    const sourceItem = currentFiltered[idx];
+    const targetItem = currentFiltered[targetIdx];
+
+    // Swap their positions in the master items array
+    const nextItems = [...items];
+    const masterSourceIdx = nextItems.findIndex((i) => i.id === sourceItem.id);
+    const masterTargetIdx = nextItems.findIndex((i) => i.id === targetItem.id);
+    if (masterSourceIdx === -1 || masterTargetIdx === -1) return;
+
+    // If moving across days in "All" view, adopt target day's dayNumber & dateStr
+    const updatedSource =
+      sourceItem.dayNumber !== targetItem.dayNumber
+        ? { ...sourceItem, dayNumber: targetItem.dayNumber, dateStr: targetItem.dateStr }
+        : sourceItem;
+
+    nextItems[masterSourceIdx] = targetItem;
+    nextItems[masterTargetIdx] = updatedSource;
+    onReorderItems(nextItems);
+  };
+
+  // Drag & Drop handlers
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedItemId(id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverItemId !== id) {
+      setDragOverItemId(id);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    const sourceId = draggedItemId || e.dataTransfer.getData('text/plain');
+    setDraggedItemId(null);
+    setDragOverItemId(null);
+
+    if (!sourceId || sourceId === targetId || !onReorderItems) return;
+
+    const sourceIdx = items.findIndex((i) => i.id === sourceId);
+    const targetIdx = items.findIndex((i) => i.id === targetId);
+    if (sourceIdx === -1 || targetIdx === -1) return;
+
+    const nextItems = [...items];
+    const [moved] = nextItems.splice(sourceIdx, 1);
+    const targetItem = items[targetIdx];
+
+    // If dropped onto an item of another day, sync dayNumber and dateStr
+    if (moved.dayNumber !== targetItem.dayNumber) {
+      moved.dayNumber = targetItem.dayNumber;
+      moved.dateStr = targetItem.dateStr;
+    }
+
+    const newTargetIdx = nextItems.findIndex((i) => i.id === targetId);
+    const insertAt = sourceIdx < targetIdx ? newTargetIdx + 1 : newTargetIdx;
+    nextItems.splice(insertAt, 0, moved);
+
+    onReorderItems(nextItems);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItemId(null);
+    setDragOverItemId(null);
+  };
+
   // Filter items by city and active day
   const filteredItems = items.filter((item) => {
     if (selectedCity !== 'ALL' && item.city !== selectedCity) return false;
@@ -113,9 +285,11 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
     return true;
   });
 
+  const currentDayInfo = DAYS_INFO.find((d) => d.day === activeDay);
+
   return (
     <div className="space-y-3">
-      {/* Day Selector Bar + Expand All Toggle */}
+      {/* Day Selector Bar + Sort / Expand Controls */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
           <button
@@ -150,39 +324,100 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
           })}
         </div>
 
-        <button
-          onClick={handleToggleExpandAll}
-          className="shrink-0 px-2.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-[11px] font-semibold flex items-center gap-1 transition active:scale-95 min-h-[38px]"
-          title={expandAll ? '상세 내용 모두 접기' : '상세 내용 모두 펼치기'}
-        >
-          <ChevronsUpDown className="w-3.5 h-3.5 text-blue-600" />
-          <span className="hidden sm:inline">{expandAll ? '모두 접기' : '모두 펼치기'}</span>
-          <span className="sm:hidden">{expandAll ? '접기' : '펼치기'}</span>
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {onReorderItems && (
+            <button
+              onClick={handleSortByTime}
+              className="px-2.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-[11px] font-semibold flex items-center gap-1 transition active:scale-95 min-h-[38px]"
+              title="시간순으로 자동 정렬"
+            >
+              <ArrowUpDown className="w-3.5 h-3.5 text-blue-600" />
+              <span className="hidden sm:inline">시간순</span>
+            </button>
+          )}
+          <button
+            onClick={handleToggleExpandAll}
+            className="px-2.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-[11px] font-semibold flex items-center gap-1 transition active:scale-95 min-h-[38px]"
+            title={expandAll ? '상세 내용 모두 접기' : '상세 내용 모두 펼치기'}
+          >
+            <ChevronsUpDown className="w-3.5 h-3.5 text-blue-600" />
+            <span>{expandAll ? '접기' : '펼치기'}</span>
+          </button>
+        </div>
       </div>
 
-      {/* Day Title Summary if single day selected */}
-      {activeDay > 0 && (
-        <div className="px-3.5 py-2.5 bg-white border border-slate-200/90 rounded-2xl flex items-center justify-between shadow-2xs">
-          <div className="min-w-0 pr-2">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <span className="font-extrabold text-blue-600">DAY {activeDay}</span>
-              <span aria-hidden="true">·</span>
-              <span className="font-semibold text-slate-700">
-                {DAYS_INFO.find((d) => d.day === activeDay)?.dateStr}
-              </span>
+      {/* Day Title Headline + Separate Accommodation Section */}
+      {activeDay > 0 && currentDayInfo && (
+        <div className="space-y-2">
+          {/* 1) Day Headline Bar */}
+          <div className="px-3.5 py-2.5 bg-white border border-slate-200/90 rounded-2xl flex items-center justify-between shadow-2xs">
+            <div className="min-w-0 pr-2">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <span className="font-extrabold text-blue-600">DAY {activeDay}</span>
+                <span aria-hidden="true">·</span>
+                <span className="font-semibold text-slate-700">
+                  {currentDayInfo.dateStr}
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm font-bold text-slate-900 mt-0.5 truncate">
+                {currentDayInfo.title}
+              </p>
             </div>
-            <p className="text-xs sm:text-sm font-bold text-slate-900 mt-0.5 truncate">
-              {DAYS_INFO.find((d) => d.day === activeDay)?.title}
-            </p>
+            <button
+              onClick={() => onAddItem(activeDay)}
+              className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-2xs transition shrink-0 min-h-[34px]"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>추가</span>
+            </button>
           </div>
-          <button
-            onClick={() => onAddItem(activeDay)}
-            className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-2xs transition shrink-0 min-h-[34px]"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>추가</span>
-          </button>
+
+          {/* 2) Dedicated Day Accommodation (그날 묵을 숙소) Section */}
+          <div className="px-3.5 py-2.5 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 flex items-center justify-between gap-2 shadow-2xs">
+            <div className="flex items-start gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                <BedDouble className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 text-[11px] text-indigo-700">
+                  <span className="font-extrabold">오늘의 숙소</span>
+                  <span aria-hidden="true">·</span>
+                  <span className="font-semibold">{currentDayInfo.hotelBadge}</span>
+                </div>
+                <a
+                  href={getGoogleMapsUrl(currentDayInfo.hotelQuery)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs sm:text-sm font-bold text-slate-900 hover:text-blue-600 hover:underline inline-flex items-center gap-1 mt-0.5 max-w-full"
+                  title="구글 맵스에서 숙소 위치 열기"
+                >
+                  <span className="truncate">{currentDayInfo.hotelName}</span>
+                  <ExternalLink className="w-3 h-3 text-indigo-600 shrink-0" />
+                </a>
+                <p className="text-[11px] text-slate-600 truncate">
+                  {currentDayInfo.hotelNote}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={(e) => handleCopyLocation(e, `hotel_day_${activeDay}`, currentDayInfo.hotelQuery)}
+              className="px-2 py-1 rounded-lg bg-white border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center gap-1 shrink-0 transition"
+              title="숙소명 복사"
+            >
+              {copiedId === `hotel_day_${activeDay}` ? (
+                <>
+                  <Check className="w-3 h-3 text-emerald-600" />
+                  <span className="text-emerald-700">복사됨</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3 h-3" />
+                  <span>복사</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
@@ -199,18 +434,27 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
         </div>
       ) : (
         <div className="relative pl-6 space-y-2.5 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200">
-          {filteredItems.map((item) => {
+          {filteredItems.map((item, idx) => {
             const isCompleted = item.status === 'COMPLETED';
             const hasDetails = Boolean(item.memo || item.tips || (item.cost && item.cost.amount > 0) || item.transportNote);
             const isExpanded = expandedIds[item.id] ?? expandAll;
+            const isDragging = draggedItemId === item.id;
+            const isDragOver = dragOverItemId === item.id && draggedItemId !== item.id;
             const convertedKrw = item.cost 
               ? convertAmount(item.cost.amount, item.cost.currency, 'KRW', DEFAULT_RATES)
               : 0;
 
             return (
               <div 
-                key={item.id} 
-                className="relative group transition-all"
+                key={item.id}
+                draggable={Boolean(onReorderItems)}
+                onDragStart={(e) => handleDragStart(e, item.id)}
+                onDragOver={(e) => handleDragOver(e, item.id)}
+                onDrop={(e) => handleDrop(e, item.id)}
+                onDragEnd={handleDragEnd}
+                className={`relative group transition-all ${
+                  isDragging ? 'opacity-40 scale-[0.99]' : ''
+                } ${isDragOver ? 'ring-2 ring-blue-500 rounded-2xl' : ''}`}
               >
                 {/* Timeline node icon with thumb touch area */}
                 <button
@@ -247,9 +491,19 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
                       : 'bg-white border-slate-200/90 hover:border-slate-300 shadow-2xs'
                   }`}
                 >
-                  {/* Top Bar: Clean Unboxed Metadata + Right Actions */}
+                  {/* Top Bar: Drag Handle + Clean Unboxed Metadata + Right Actions */}
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 flex-wrap text-xs text-slate-500 min-w-0">
+                      {onReorderItems && (
+                        <span
+                          className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 -ml-1"
+                          title="드래그하여 순서 변경"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <GripVertical className="w-3.5 h-3.5" />
+                        </span>
+                      )}
+
                       {activeDay === 0 && (
                         <>
                           <span className="font-bold text-slate-700">
@@ -285,11 +539,33 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
                       )}
                     </div>
 
-                    {/* Action buttons */}
+                    {/* Action buttons: Reorder Up/Down + Edit + Delete */}
                     <div
                       className="flex items-center gap-0.5 shrink-0"
                       onClick={(e) => e.stopPropagation()}
                     >
+                      {onReorderItems && (
+                        <>
+                          <button
+                            onClick={(e) => handleMoveStep(e, item.id, 'UP')}
+                            disabled={idx === 0}
+                            className="w-6 h-7 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100 disabled:opacity-25 disabled:pointer-events-none transition flex items-center justify-center"
+                            title="위로 이동"
+                            aria-label="위로 이동"
+                          >
+                            <ArrowUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={(e) => handleMoveStep(e, item.id, 'DOWN')}
+                            disabled={idx === filteredItems.length - 1}
+                            className="w-6 h-7 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100 disabled:opacity-25 disabled:pointer-events-none transition flex items-center justify-center"
+                            title="아래로 이동"
+                            aria-label="아래로 이동"
+                          >
+                            <ArrowDown className="w-3 h-3" />
+                          </button>
+                        </>
+                      )}
                       <button
                         onClick={() => onEditItem(item)}
                         className="w-7 h-7 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition flex items-center justify-center"
@@ -316,11 +592,21 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
                     {item.title}
                   </h3>
 
-                  {/* Compact Footer Row: Location + Copy + Expand Indicator */}
+                  {/* Compact Footer Row: Clickable Google Maps Location + Copy + Expand Indicator */}
                   <div className="flex items-center justify-between gap-2 mt-1.5 pt-1.5 border-t border-slate-100">
-                    <div className="flex items-center gap-1.5 min-w-0 text-xs text-slate-500">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate">{item.location}</span>
+                    <div className="flex items-center gap-1.5 min-w-0 text-xs">
+                      <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <a
+                        href={getGoogleMapsUrl(item.location)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="truncate text-slate-700 hover:text-blue-600 hover:underline font-medium inline-flex items-center gap-1"
+                        title="구글 맵스에서 위치 열기"
+                      >
+                        <span className="truncate">{item.location}</span>
+                        <ExternalLink className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                      </a>
                       <button
                         onClick={(e) => handleCopyLocation(e, item.id, item.location)}
                         className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-slate-500 hover:text-blue-600 hover:bg-slate-100 flex items-center gap-0.5 shrink-0 transition"

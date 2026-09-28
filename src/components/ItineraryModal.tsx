@@ -105,24 +105,31 @@ export const ItineraryModal: React.FC<ItineraryModalProps> = ({
       dayNumber,
       dateStr,
       city,
-      time,
+      time: time || '10:00',
       title: title.trim(),
       location: location.trim(),
       transport,
-      transportNote: transportNote.trim() || undefined,
       status,
-      memo: memo.trim() || undefined,
-      tips: tips.trim() || undefined,
       highlight,
-      cost: hasCost && costAmount > 0 ? {
-        amount: costAmount,
-        currency: costCurrency,
-        description: costDesc.trim() || undefined,
-      } : undefined,
+      ...(transportNote.trim() ? { transportNote: transportNote.trim() } : {}),
+      ...(memo.trim() ? { memo: memo.trim() } : {}),
+      ...(tips.trim() ? { tips: tips.trim() } : {}),
+      ...(hasCost && costAmount > 0
+        ? {
+            cost: {
+              amount: costAmount,
+              currency: costCurrency,
+              ...(costDesc.trim() ? { description: costDesc.trim() } : {}),
+            },
+          }
+        : {}),
     };
 
-    onSave(newItem);
-    onClose();
+    try {
+      onSave(newItem);
+    } finally {
+      onClose();
+    }
   };
 
   if (!isOpen) return null;

@@ -212,12 +212,16 @@ export class FirebaseSyncService {
     }).catch(console.warn);
   }
 
+  private sanitizePayload<T>(data: T): T {
+    return JSON.parse(JSON.stringify(data));
+  }
+
   private seedInitialRoomData() {
     const dataRef = ref(this.db, `rooms/${this.roomId}/data`);
     const initialPayload = {
-      itinerary: INITIAL_ITINERARY,
-      budget: INITIAL_BUDGET,
-      drivers: INITIAL_DRIVERS,
+      itinerary: this.sanitizePayload(INITIAL_ITINERARY),
+      budget: this.sanitizePayload(INITIAL_BUDGET),
+      drivers: this.sanitizePayload(INITIAL_DRIVERS),
       updatedBy: '초기 세팅',
       updatedAt: serverTimestamp(),
       version: 1,
@@ -241,36 +245,48 @@ export class FirebaseSyncService {
   }
 
   public updateItinerary(itinerary: ItineraryItem[]) {
-    const dataRef = ref(this.db, `rooms/${this.roomId}/data`);
-    update(dataRef, {
-      itinerary,
-      updatedBy: this.userName,
-      updatedAt: serverTimestamp(),
-    }).catch((err) => {
-      console.error('[FirebaseSync] Error updating itinerary:', err);
-    });
+    try {
+      const dataRef = ref(this.db, `rooms/${this.roomId}/data`);
+      update(dataRef, {
+        itinerary: this.sanitizePayload(itinerary),
+        updatedBy: this.userName,
+        updatedAt: serverTimestamp(),
+      }).catch((err) => {
+        console.error('[FirebaseSync] Error updating itinerary:', err);
+      });
+    } catch (err) {
+      console.error('[FirebaseSync] Failed to prepare itinerary update:', err);
+    }
   }
 
   public updateBudget(budget: BudgetItem[]) {
-    const dataRef = ref(this.db, `rooms/${this.roomId}/data`);
-    update(dataRef, {
-      budget,
-      updatedBy: this.userName,
-      updatedAt: serverTimestamp(),
-    }).catch((err) => {
-      console.error('[FirebaseSync] Error updating budget:', err);
-    });
+    try {
+      const dataRef = ref(this.db, `rooms/${this.roomId}/data`);
+      update(dataRef, {
+        budget: this.sanitizePayload(budget),
+        updatedBy: this.userName,
+        updatedAt: serverTimestamp(),
+      }).catch((err) => {
+        console.error('[FirebaseSync] Error updating budget:', err);
+      });
+    } catch (err) {
+      console.error('[FirebaseSync] Failed to prepare budget update:', err);
+    }
   }
 
   public updateDrivers(drivers: DriverContact[]) {
-    const dataRef = ref(this.db, `rooms/${this.roomId}/data`);
-    update(dataRef, {
-      drivers,
-      updatedBy: this.userName,
-      updatedAt: serverTimestamp(),
-    }).catch((err) => {
-      console.error('[FirebaseSync] Error updating drivers:', err);
-    });
+    try {
+      const dataRef = ref(this.db, `rooms/${this.roomId}/data`);
+      update(dataRef, {
+        drivers: this.sanitizePayload(drivers),
+        updatedBy: this.userName,
+        updatedAt: serverTimestamp(),
+      }).catch((err) => {
+        console.error('[FirebaseSync] Error updating drivers:', err);
+      });
+    } catch (err) {
+      console.error('[FirebaseSync] Failed to prepare drivers update:', err);
+    }
   }
 
   public resetToDefault() {
