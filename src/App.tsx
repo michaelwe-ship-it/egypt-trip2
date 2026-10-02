@@ -59,27 +59,48 @@ export default function App() {
   const [selectedCity, setSelectedCity] = useState<City>('ALL');
   const [itineraryViewMode, setItineraryViewMode] = useState<ItineraryViewMode>('TIMELINE');
 
+  const DATA_REVISION = '2026-10-02-v10-verified';
+
   // Application Data States
   const [itinerary, setItinerary] = useState<ItineraryItem[]>(() => {
-    const saved = localStorage.getItem('egypt_itinerary_cache');
-    return saved ? JSON.parse(saved) : INITIAL_ITINERARY;
+    if (typeof window !== 'undefined') {
+      const storedRev = localStorage.getItem('egypt_data_revision');
+      if (storedRev !== DATA_REVISION) {
+        localStorage.setItem('egypt_data_revision', DATA_REVISION);
+        localStorage.removeItem('egypt_itinerary_cache');
+        localStorage.removeItem('egypt_budget_cache');
+        localStorage.removeItem('egypt_drivers_cache');
+        return INITIAL_ITINERARY;
+      }
+      const saved = localStorage.getItem('egypt_itinerary_cache');
+      return saved ? JSON.parse(saved) : INITIAL_ITINERARY;
+    }
+    return INITIAL_ITINERARY;
   });
   const [budget, setBudget] = useState<BudgetItem[]>(() => {
-    const saved = localStorage.getItem('egypt_budget_cache');
-    return saved ? JSON.parse(saved) : INITIAL_BUDGET;
+    if (typeof window !== 'undefined') {
+      const storedRev = localStorage.getItem('egypt_data_revision');
+      if (storedRev !== DATA_REVISION) return INITIAL_BUDGET;
+      const saved = localStorage.getItem('egypt_budget_cache');
+      return saved ? JSON.parse(saved) : INITIAL_BUDGET;
+    }
+    return INITIAL_BUDGET;
   });
   const [drivers, setDrivers] = useState<DriverContact[]>(() => {
-    const saved = localStorage.getItem('egypt_drivers_cache');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Reset to updated verified drivers if old placeholder numbers exist
-        if (parsed.some((d: any) => d.phone && d.phone.includes('1234567'))) {
+    if (typeof window !== 'undefined') {
+      const storedRev = localStorage.getItem('egypt_data_revision');
+      if (storedRev !== DATA_REVISION) return INITIAL_DRIVERS;
+      const saved = localStorage.getItem('egypt_drivers_cache');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.some((d: any) => d.phone && d.phone.includes('1234567'))) {
+            return INITIAL_DRIVERS;
+          }
+          return parsed;
+        } catch {
           return INITIAL_DRIVERS;
         }
-        return parsed;
-      } catch {
-        return INITIAL_DRIVERS;
       }
     }
     return INITIAL_DRIVERS;
@@ -232,7 +253,7 @@ export default function App() {
 
       if (timeOrDayChanged) {
         // Re-sort the target day's items by time while preserving other days' order
-        updated = [1, 2, 3, 4, 5, 6].flatMap((day) => {
+        updated = [1, 2, 3, 4, 5, 6, 7].flatMap((day) => {
           const dayList = updated.filter(i => i.dayNumber === day);
           if (day === item.dayNumber) {
             return [...dayList].sort((a, b) => a.time.localeCompare(b.time));
@@ -242,7 +263,7 @@ export default function App() {
       }
     } else {
       const appended = [...itinerary, item];
-      updated = [1, 2, 3, 4, 5, 6].flatMap((day) => {
+      updated = [1, 2, 3, 4, 5, 6, 7].flatMap((day) => {
         const dayList = appended.filter(i => i.dayNumber === day);
         if (day === item.dayNumber) {
           return [...dayList].sort((a, b) => a.time.localeCompare(b.time));

@@ -50,6 +50,7 @@ export const ItineraryDetailed: React.FC<ItineraryDetailedProps> = ({
     4: false,
     5: false,
     6: false,
+    7: false,
   });
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const [expandAllDetails, setExpandAllDetails] = useState<boolean>(false);
@@ -69,7 +70,7 @@ export const ItineraryDetailed: React.FC<ItineraryDetailedProps> = ({
   const handleToggleAll = () => {
     const next = !expandAllDetails;
     setExpandAllDetails(next);
-    setExpandedDays({ 1: true, 2: true, 3: true, 4: true, 5: true, 6: true });
+    setExpandedDays({ 1: true, 2: true, 3: true, 4: true, 5: true, 6: true, 7: true });
     setExpandedItems({});
   };
 

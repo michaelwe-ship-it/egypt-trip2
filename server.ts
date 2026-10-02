@@ -20,6 +20,8 @@ if (!fs.existsSync(DATA_DIR)) {
 // In-memory room store with persistent disk backup
 const rooms: Map<string, AppState> = new Map();
 
+const VERIFIED_ROOM_VERSION = 100;
+
 function loadPersistedRooms() {
   try {
     if (fs.existsSync(DATA_FILE)) {
@@ -30,6 +32,32 @@ function loadPersistedRooms() {
       }
       console.log(`[Storage] Loaded ${rooms.size} rooms from disk.`);
     }
+
+    // Ensure rooms are updated to the verified latest schedule (version 100)
+    for (const [, state] of rooms.entries()) {
+      if (!state.version || state.version < VERIFIED_ROOM_VERSION) {
+        state.itinerary = INITIAL_ITINERARY;
+        state.budget = INITIAL_BUDGET;
+        state.drivers = INITIAL_DRIVERS;
+        state.version = VERIFIED_ROOM_VERSION;
+        state.updatedAt = new Date().toISOString();
+        state.updatedBy = '최신 일정 최신화';
+      }
+    }
+
+    if (!rooms.has('egypt-10th-anniversary')) {
+      rooms.set('egypt-10th-anniversary', {
+        roomId: 'egypt-10th-anniversary',
+        version: VERIFIED_ROOM_VERSION,
+        updatedAt: new Date().toISOString(),
+        updatedBy: '최신 일정 최신화',
+        itinerary: INITIAL_ITINERARY,
+        budget: INITIAL_BUDGET,
+        drivers: INITIAL_DRIVERS,
+      });
+    }
+
+    saveRoomsToDisk();
   } catch (err) {
     console.error('[Storage] Error loading rooms from disk:', err);
   }
@@ -50,13 +78,13 @@ function saveRoomsToDisk() {
 loadPersistedRooms();
 
 function getOrCreateRoom(roomId: string): AppState {
-  const normalizedId = roomId.trim().toLowerCase() || 'egypt-honeymoon';
+  const normalizedId = roomId.trim().toLowerCase() || 'egypt-10th-anniversary';
   if (!rooms.has(normalizedId)) {
     const initialState: AppState = {
       roomId: normalizedId,
-      version: 1,
+      version: VERIFIED_ROOM_VERSION,
       updatedAt: new Date().toISOString(),
-      updatedBy: 'system',
+      updatedBy: '최신 일정 최신화',
       itinerary: INITIAL_ITINERARY,
       budget: INITIAL_BUDGET,
       drivers: INITIAL_DRIVERS,

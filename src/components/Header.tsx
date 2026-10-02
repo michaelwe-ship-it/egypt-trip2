@@ -77,13 +77,26 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium">
-                카이로 · 룩소르 · 10/28(수) ~ 11/2(월)
+                카이로 · 룩소르 · 10/28(수) ~ 11/3(화)
               </p>
             </div>
           </div>
 
           {/* Right Action buttons */}
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Sync & Share button */}
+            <button
+              onClick={onOpenSyncModal}
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition border border-slate-200 flex items-center justify-center shrink-0 shadow-xs relative"
+              title="실시간 동기화 & 공유"
+              aria-label="실시간 동기화"
+            >
+              <Share2 className="w-4 h-4 text-blue-600" />
+              {connectedCount > 1 && (
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />
+              )}
+            </button>
+
             {/* Emergency button */}
             <button
               onClick={onOpenEmergencyModal}
