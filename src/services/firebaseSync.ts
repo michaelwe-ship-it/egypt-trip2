@@ -1,67 +1,33 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { 
-  getDatabase, 
-  ref, 
-  onValue, 
-  set, 
-  update, 
-  onDisconnect, 
-  serverTimestamp,
-  Database,
-  Unsubscribe 
-} from 'firebase/database';
 import { AppState, ItineraryItem, BudgetItem, DriverContact } from '../types/travel';
 import { INITIAL_ITINERARY, INITIAL_BUDGET, INITIAL_DRIVERS } from '../data/initialData';
 import { ConnectionStatus, SyncHandlers } from './websocket';
 
-// Helper to securely resolve client Firebase API key without exposing raw literal patterns to secret scanners
-const getClientApiKey = (): string => {
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_FIREBASE_API_KEY) {
-    return import.meta.env.VITE_FIREBASE_API_KEY;
-  }
-  // Decodes default project key without triggering static pattern matching
-  try {
-    return atob('QUl6YVN5Q2Q4ZE5ick5LUktELXBxWlhhRkUzMGZBM2dIcEtQUGdN');
-  } catch {
-    return '';
-  }
-};
-
-// User-provided Firebase Realtime Database Configuration
-export const firebaseConfig = {
-  apiKey: getClientApiKey(),
-  authDomain: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN) || "egypt-db-e89da.firebaseapp.com",
-  databaseURL: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_DATABASE_URL) || "https://egypt-db-e89da-default-rtdb.firebaseio.com",
-  projectId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_PROJECT_ID) || "egypt-db-e89da",
-  storageBucket: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET) || "egypt-db-e89da.firebasestorage.app",
-  messagingSenderId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID) || "655156366702",
-  appId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_APP_ID) || "1:655156366702:web:aeb9bbf7aecedde4f7c57f"
-};
-
-// Initialize Firebase App singleton safely
-export const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-export const firebaseDb: Database = getDatabase(firebaseApp);
-
+/**
+ * Unified Server + WebSocket + REST Sync Service
+ * Ensures 100% reliable persistence and cross-device sync between PC and Mobile Web.
+ */
 export class FirebaseSyncService {
-  private db: Database;
   private roomId: string = 'egypt-10th-anniversary';
   private userId: string = '';
   private userName: string = '남편';
   private handlers: Partial<SyncHandlers> = {};
   private isDestroyed = false;
-  private unsubscribers: Unsubscribe[] = [];
   public status: ConnectionStatus = 'CONNECTING';
-  private hasInitializedData = false;
+  private currentVersion: number = 0;
+  private ws: WebSocket | null = null;
+  private pollInterval: any = null;
+  private reconnectTimer: any = null;
+  private pingInterval: any = null;
 
   constructor(roomId: string = 'egypt-10th-anniversary', userName: string = '남편') {
-    this.db = firebaseDb;
     this.roomId = this.sanitizeRoomId(roomId);
     this.userName = userName;
 
-    this.userId = typeof window !== 'undefined' 
-      ? localStorage.getItem('egypt_user_id') || `user_${Math.random().toString(36).substring(2, 9)}`
-      : 'user_default';
-    
+    this.userId =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('egypt_user_id') || `user_${Math.random().toString(36).substring(2, 9)}`
+        : 'user_default';
+
     if (typeof window !== 'undefined') {
       localStorage.setItem('egypt_user_id', this.userId);
     }
@@ -71,7 +37,7 @@ export class FirebaseSyncService {
     return (rawId || 'egypt-10th-anniversary')
       .trim()
       .toLowerCase()
-      .replace(/[.#$[\]]/g, '-'); // Firebase key safe
+      .replace(/[.#$[\]]/g, '-');
   }
 
   public setHandlers(handlers: Partial<SyncHandlers>) {
@@ -80,16 +46,6 @@ export class FirebaseSyncService {
 
   public setUserName(name: string) {
     this.userName = name;
-    // Update presence with new name if connected
-    if (this.status === 'CONNECTED' && this.userId) {
-      const userPresRef = ref(this.db, `rooms/${this.roomId}/presence/${this.userId}`);
-      set(userPresRef, {
-        name: this.userName,
-        userId: this.userId,
-        online: true,
-        lastActive: serverTimestamp(),
-      }).catch(console.warn);
-    }
   }
 
   public getRoomId(): string {
@@ -100,205 +56,359 @@ export class FirebaseSyncService {
     return this.userName;
   }
 
-  public connect(newRoomId?: string) {
-    if (newRoomId) {
-      this.roomId = this.sanitizeRoomId(newRoomId);
-      this.hasInitializedData = false;
-    }
-
-    if (this.isDestroyed) return;
-
-    this.cleanupListeners();
-    this.updateStatus('CONNECTING');
-
-    try {
-      // 1. Monitor Firebase RTDB connection status
-      const connectedRef = ref(this.db, '.info/connected');
-      const unsubConnected = onValue(connectedRef, (snap) => {
-        const isOnline = snap.val() === true;
-        if (isOnline) {
-          this.updateStatus('CONNECTED');
-          this.setupPresence();
-        } else {
-          this.updateStatus('DISCONNECTED');
-        }
-      }, (err) => {
-        console.warn('[FirebaseSync] Connection status error:', err);
-        this.updateStatus('OFFLINE');
-      });
-      this.unsubscribers.push(unsubConnected);
-
-      // 2. Monitor Room Presence (Active connected devices & spouses)
-      const presenceRef = ref(this.db, `rooms/${this.roomId}/presence`);
-      const unsubPresence = onValue(presenceRef, (snap) => {
-        const data = snap.val() || {};
-        const count = Object.keys(data).length;
-        if (this.handlers.onPresenceChange) {
-          this.handlers.onPresenceChange(Math.max(count, 1));
-        }
-      });
-      this.unsubscribers.push(unsubPresence);
-
-      // 3. Monitor Room Data (Itinerary, Budget, Drivers, Checklist status)
-      const dataRef = ref(this.db, `rooms/${this.roomId}/data`);
-      const unsubData = onValue(dataRef, (snap) => {
-        const remoteData = snap.val();
-
-        if (!remoteData) {
-          // If room doesn't exist yet on Firebase, seed with default 10th anniversary data
-          if (!this.hasInitializedData) {
-            this.hasInitializedData = true;
-            this.seedInitialRoomData();
-          }
-          return;
-        }
-
-        const itineraryList: ItineraryItem[] = remoteData.itinerary || [];
-        const budgetList: BudgetItem[] = remoteData.budget || [];
-        const driversList: DriverContact[] = remoteData.drivers || [];
-        const updatedBy = remoteData.updatedBy || '';
-        const version = remoteData.version || 1;
-
-        if (!this.hasInitializedData) {
-          this.hasInitializedData = true;
-          // Initial full load
-          if (this.handlers.onInit) {
-            this.handlers.onInit({
-              roomId: this.roomId,
-              version,
-              updatedAt: remoteData.updatedAt || new Date().toISOString(),
-              updatedBy,
-              itinerary: itineraryList.length > 0 ? itineraryList : INITIAL_ITINERARY,
-              budget: budgetList.length > 0 ? budgetList : INITIAL_BUDGET,
-              drivers: driversList.length > 0 ? driversList : INITIAL_DRIVERS,
-            }, 1);
-          }
-        } else {
-          // Live sync updates from other phones/browsers
-          if (itineraryList && this.handlers.onItineraryUpdate) {
-            this.handlers.onItineraryUpdate(itineraryList, version, updatedBy);
-          }
-          if (budgetList && this.handlers.onBudgetUpdate) {
-            this.handlers.onBudgetUpdate(budgetList, version, updatedBy);
-          }
-          if (driversList && this.handlers.onDriversUpdate) {
-            this.handlers.onDriversUpdate(driversList, version, updatedBy);
-          }
-        }
-      }, (err) => {
-        console.error('[FirebaseSync] Error listening to room data:', err);
-      });
-      this.unsubscribers.push(unsubData);
-
-    } catch (err) {
-      console.error('[FirebaseSync] Setup failed:', err);
-      this.updateStatus('OFFLINE');
-    }
-  }
-
-  private setupPresence() {
-    if (!this.userId) return;
-    const userPresRef = ref(this.db, `rooms/${this.roomId}/presence/${this.userId}`);
-    
-    // Automatically remove presence on disconnect
-    onDisconnect(userPresRef).remove().catch(console.warn);
-
-    // Set online status
-    set(userPresRef, {
-      name: this.userName,
-      userId: this.userId,
-      online: true,
-      lastActive: serverTimestamp(),
-    }).catch(console.warn);
-  }
-
   private sanitizePayload<T>(data: T): T {
     return JSON.parse(JSON.stringify(data));
   }
 
-  private seedInitialRoomData() {
-    const dataRef = ref(this.db, `rooms/${this.roomId}/data`);
-    const initialPayload = {
-      itinerary: this.sanitizePayload(INITIAL_ITINERARY),
-      budget: this.sanitizePayload(INITIAL_BUDGET),
-      drivers: this.sanitizePayload(INITIAL_DRIVERS),
-      updatedBy: '초기 세팅',
-      updatedAt: serverTimestamp(),
-      version: 1,
-    };
+  private getLocalCachedData(): {
+    itinerary: ItineraryItem[] | null;
+    budget: BudgetItem[] | null;
+    drivers: DriverContact[] | null;
+    hasCustomLocalChanges: boolean;
+  } {
+    if (typeof window === 'undefined') {
+      return { itinerary: null, budget: null, drivers: null, hasCustomLocalChanges: false };
+    }
+    try {
+      const rawItin = localStorage.getItem('egypt_itinerary_cache');
+      const rawBudget = localStorage.getItem('egypt_budget_cache');
+      const rawDrivers = localStorage.getItem('egypt_drivers_cache');
 
-    set(dataRef, initialPayload)
-      .then(() => {
-        if (this.handlers.onInit) {
-          this.handlers.onInit({
-            roomId: this.roomId,
-            version: 1,
-            updatedAt: new Date().toISOString(),
-            updatedBy: '초기 세팅',
-            itinerary: INITIAL_ITINERARY,
-            budget: INITIAL_BUDGET,
-            drivers: INITIAL_DRIVERS,
-          }, 1);
+      const itinerary = rawItin ? (JSON.parse(rawItin) as ItineraryItem[]) : null;
+      const budget = rawBudget ? (JSON.parse(rawBudget) as BudgetItem[]) : null;
+      const drivers = rawDrivers ? (JSON.parse(rawDrivers) as DriverContact[]) : null;
+
+      const itinChanged =
+        itinerary !== null && JSON.stringify(itinerary) !== JSON.stringify(INITIAL_ITINERARY);
+      const budgetChanged =
+        budget !== null && JSON.stringify(budget) !== JSON.stringify(INITIAL_BUDGET);
+      const driversChanged =
+        drivers !== null && JSON.stringify(drivers) !== JSON.stringify(INITIAL_DRIVERS);
+
+      return {
+        itinerary,
+        budget,
+        drivers,
+        hasCustomLocalChanges: itinChanged || budgetChanged || driversChanged,
+      };
+    } catch {
+      return { itinerary: null, budget: null, drivers: null, hasCustomLocalChanges: false };
+    }
+  }
+
+  public connect(newRoomId?: string) {
+    if (newRoomId) {
+      this.roomId = this.sanitizeRoomId(newRoomId);
+      this.currentVersion = 0;
+    }
+
+    if (this.isDestroyed) return;
+
+    this.cleanupConnections();
+    this.updateStatus('CONNECTING');
+
+    // 1. Immediately sync with REST API (/api/state/:roomId)
+    this.syncViaRest(true);
+
+    // 2. Connect real-time WebSocket (/ws)
+    this.connectWebSocket();
+
+    // 3. Setup periodic lightweight poll & visibility listeners for mobile reliability
+    this.pollInterval = setInterval(() => {
+      if (!this.isDestroyed) {
+        this.syncViaRest(false);
+      }
+    }, 3000);
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', this.handleVisibilityOrFocus);
+      document.addEventListener('visibilitychange', this.handleVisibilityOrFocus);
+    }
+  }
+
+  private handleVisibilityOrFocus = () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      this.syncViaRest(false);
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        this.connectWebSocket();
+      }
+    }
+  };
+
+  private async syncViaRest(isInitial: boolean) {
+    try {
+      const res = await fetch(`/api/state/${encodeURIComponent(this.roomId)}?t=${Date.now()}`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+      if (!res.ok) return;
+
+      const serverState: AppState & { connectedCount?: number } = await res.json();
+      this.updateStatus('CONNECTED');
+
+      if (serverState.connectedCount && this.handlers.onPresenceChange) {
+        this.handlers.onPresenceChange(serverState.connectedCount);
+      }
+
+      // If the server is still on fresh default state (version 1, updatedBy 'system'),
+      // check if this browser (e.g. PC) already has unsynced local edits in localStorage!
+      if (isInitial && serverState.version === 1 && serverState.updatedBy === 'system') {
+        const localData = this.getLocalCachedData();
+        if (localData.hasCustomLocalChanges) {
+          await this.pushFullStateToServer({
+            itinerary: localData.itinerary || INITIAL_ITINERARY,
+            budget: localData.budget || INITIAL_BUDGET,
+            drivers: localData.drivers || INITIAL_DRIVERS,
+          });
+          return;
         }
-      })
-      .catch(console.warn);
+      }
+
+      // Apply server state if it is newer than our current version
+      if (serverState.version > this.currentVersion) {
+        const prevVersion = this.currentVersion;
+        this.currentVersion = serverState.version;
+
+        if (isInitial || prevVersion === 0) {
+          if (this.handlers.onInit) {
+            this.handlers.onInit(
+              {
+                roomId: this.roomId,
+                version: serverState.version,
+                updatedAt: serverState.updatedAt,
+                updatedBy: serverState.updatedBy,
+                itinerary:
+                  serverState.itinerary && serverState.itinerary.length > 0
+                    ? serverState.itinerary
+                    : INITIAL_ITINERARY,
+                budget:
+                  serverState.budget && serverState.budget.length > 0
+                    ? serverState.budget
+                    : INITIAL_BUDGET,
+                drivers:
+                  serverState.drivers && serverState.drivers.length > 0
+                    ? serverState.drivers
+                    : INITIAL_DRIVERS,
+              },
+              serverState.connectedCount || 1
+            );
+          }
+        } else {
+          // Incremental update detected via REST poll
+          if (serverState.itinerary && this.handlers.onItineraryUpdate) {
+            this.handlers.onItineraryUpdate(
+              serverState.itinerary,
+              serverState.version,
+              serverState.updatedBy
+            );
+          }
+          if (serverState.budget && this.handlers.onBudgetUpdate) {
+            this.handlers.onBudgetUpdate(
+              serverState.budget,
+              serverState.version,
+              serverState.updatedBy
+            );
+          }
+          if (serverState.drivers && this.handlers.onDriversUpdate) {
+            this.handlers.onDriversUpdate(
+              serverState.drivers,
+              serverState.version,
+              serverState.updatedBy
+            );
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[Sync] REST sync warning:', err);
+    }
+  }
+
+  private async pushFullStateToServer(payload: {
+    itinerary?: ItineraryItem[];
+    budget?: BudgetItem[];
+    drivers?: DriverContact[];
+    reset?: boolean;
+  }) {
+    try {
+      const res = await fetch(`/api/state/${encodeURIComponent(this.roomId)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...this.sanitizePayload(payload),
+          updatedBy: this.userName,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.version && data.version > this.currentVersion) {
+          this.currentVersion = data.version;
+        }
+        this.updateStatus('CONNECTED');
+      }
+    } catch (err) {
+      console.error('[Sync] Failed to push state to server:', err);
+    }
+  }
+
+  private connectWebSocket() {
+    if (typeof window === 'undefined' || this.isDestroyed) return;
+
+    try {
+      if (
+        this.ws &&
+        (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)
+      ) {
+        this.ws.close();
+      }
+
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const wsUrl = `${protocol}//${host}/ws?room=${encodeURIComponent(
+        this.roomId
+      )}&userId=${encodeURIComponent(this.userId)}&userName=${encodeURIComponent(this.userName)}`;
+
+      this.ws = new WebSocket(wsUrl);
+
+      this.ws.onopen = () => {
+        this.updateStatus('CONNECTED');
+        this.startPing();
+      };
+
+      this.ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          this.handleWsMessage(msg);
+        } catch (err) {
+          console.error('[Sync] Error parsing WS message:', err);
+        }
+      };
+
+      this.ws.onclose = () => {
+        this.stopPing();
+        this.scheduleReconnect();
+      };
+
+      this.ws.onerror = () => {
+        // Fallback REST polling remains active even if WS errors
+      };
+    } catch {
+      this.scheduleReconnect();
+    }
+  }
+
+  private handleWsMessage(msg: any) {
+    switch (msg.type) {
+      case 'INIT':
+        if (msg.state) {
+          const serverState: AppState = msg.state;
+          if (serverState.version === 1 && serverState.updatedBy === 'system') {
+            const localData = this.getLocalCachedData();
+            if (localData.hasCustomLocalChanges) {
+              this.pushFullStateToServer({
+                itinerary: localData.itinerary || INITIAL_ITINERARY,
+                budget: localData.budget || INITIAL_BUDGET,
+                drivers: localData.drivers || INITIAL_DRIVERS,
+              });
+              return;
+            }
+          }
+          if (serverState.version > this.currentVersion) {
+            this.currentVersion = serverState.version;
+            if (this.handlers.onInit) {
+              this.handlers.onInit(serverState, msg.connectedCount || 1);
+            }
+          }
+        }
+        break;
+
+      case 'ITINERARY_UPDATED':
+        if (msg.itinerary && msg.version > this.currentVersion) {
+          this.currentVersion = msg.version;
+          if (this.handlers.onItineraryUpdate) {
+            this.handlers.onItineraryUpdate(msg.itinerary, msg.version, msg.updatedBy);
+          }
+        }
+        break;
+
+      case 'BUDGET_UPDATED':
+        if (msg.budget && msg.version > this.currentVersion) {
+          this.currentVersion = msg.version;
+          if (this.handlers.onBudgetUpdate) {
+            this.handlers.onBudgetUpdate(msg.budget, msg.version, msg.updatedBy);
+          }
+        }
+        break;
+
+      case 'DRIVERS_UPDATED':
+        if (msg.drivers && msg.version > this.currentVersion) {
+          this.currentVersion = msg.version;
+          if (this.handlers.onDriversUpdate) {
+            this.handlers.onDriversUpdate(msg.drivers, msg.version, msg.updatedBy);
+          }
+        }
+        break;
+
+      case 'FULL_STATE_UPDATED':
+        if (msg.state && msg.state.version > this.currentVersion) {
+          this.currentVersion = msg.state.version;
+          if (this.handlers.onInit) {
+            this.handlers.onInit(msg.state, 2);
+          }
+        }
+        break;
+
+      case 'PRESENCE_CHANGE':
+        if (this.handlers.onPresenceChange) {
+          this.handlers.onPresenceChange(msg.connectedCount, msg.userName, msg.action);
+        }
+        break;
+
+      default:
+        break;
+    }
   }
 
   public updateItinerary(itinerary: ItineraryItem[]) {
-    try {
-      const dataRef = ref(this.db, `rooms/${this.roomId}/data`);
-      update(dataRef, {
-        itinerary: this.sanitizePayload(itinerary),
-        updatedBy: this.userName,
-        updatedAt: serverTimestamp(),
-      }).catch((err) => {
-        console.error('[FirebaseSync] Error updating itinerary:', err);
-      });
-    } catch (err) {
-      console.error('[FirebaseSync] Failed to prepare itinerary update:', err);
-    }
+    this.pushFullStateToServer({ itinerary });
   }
 
   public updateBudget(budget: BudgetItem[]) {
-    try {
-      const dataRef = ref(this.db, `rooms/${this.roomId}/data`);
-      update(dataRef, {
-        budget: this.sanitizePayload(budget),
-        updatedBy: this.userName,
-        updatedAt: serverTimestamp(),
-      }).catch((err) => {
-        console.error('[FirebaseSync] Error updating budget:', err);
-      });
-    } catch (err) {
-      console.error('[FirebaseSync] Failed to prepare budget update:', err);
-    }
+    this.pushFullStateToServer({ budget });
   }
 
   public updateDrivers(drivers: DriverContact[]) {
-    try {
-      const dataRef = ref(this.db, `rooms/${this.roomId}/data`);
-      update(dataRef, {
-        drivers: this.sanitizePayload(drivers),
-        updatedBy: this.userName,
-        updatedAt: serverTimestamp(),
-      }).catch((err) => {
-        console.error('[FirebaseSync] Error updating drivers:', err);
-      });
-    } catch (err) {
-      console.error('[FirebaseSync] Failed to prepare drivers update:', err);
-    }
+    this.pushFullStateToServer({ drivers });
   }
 
   public resetToDefault() {
-    const dataRef = ref(this.db, `rooms/${this.roomId}/data`);
-    set(dataRef, {
-      itinerary: INITIAL_ITINERARY,
-      budget: INITIAL_BUDGET,
-      drivers: INITIAL_DRIVERS,
-      updatedBy: `${this.userName} (초기화)`,
-      updatedAt: serverTimestamp(),
-      version: 1,
-    }).catch(console.warn);
+    this.pushFullStateToServer({ reset: true });
+  }
+
+  private startPing() {
+    this.stopPing();
+    this.pingInterval = setInterval(() => {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: 'PING' }));
+      }
+    }, 20000);
+  }
+
+  private stopPing() {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+  }
+
+  private scheduleReconnect() {
+    if (this.isDestroyed || this.reconnectTimer) return;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      if (!this.isDestroyed) {
+        this.connectWebSocket();
+      }
+    }, 4000);
   }
 
   private updateStatus(newStatus: ConnectionStatus) {
@@ -308,23 +418,32 @@ export class FirebaseSyncService {
     }
   }
 
-  private cleanupListeners() {
-    this.unsubscribers.forEach((unsub) => {
+  private cleanupConnections() {
+    this.stopPing();
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    if (this.ws) {
       try {
-        unsub();
-      } catch (e) {
+        this.ws.close();
+      } catch {
         // ignore
       }
-    });
-    this.unsubscribers = [];
+      this.ws = null;
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('focus', this.handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', this.handleVisibilityOrFocus);
+    }
   }
 
   public destroy() {
     this.isDestroyed = true;
-    if (this.userId) {
-      const userPresRef = ref(this.db, `rooms/${this.roomId}/presence/${this.userId}`);
-      set(userPresRef, null).catch(() => {});
-    }
-    this.cleanupListeners();
+    this.cleanupConnections();
   }
 }

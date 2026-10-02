@@ -100,7 +100,7 @@ function getRoomClientCount(roomId: string): number {
 
 async function startServer() {
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: '5mb' }));
 
   const server = http.createServer(app);
 
@@ -217,23 +217,37 @@ async function startServer() {
 
   // REST API Endpoints
   app.get('/api/state/:roomId', (req, res) => {
-    const roomId = req.params.roomId.toLowerCase();
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    const roomId = req.params.roomId.trim().toLowerCase() || 'egypt-10th-anniversary';
     const state = getOrCreateRoom(roomId);
-    res.json(state);
+    res.json({
+      ...state,
+      connectedCount: Math.max(getRoomClientCount(roomId), 1),
+    });
   });
 
   app.post('/api/state/:roomId', (req, res) => {
-    const roomId = req.params.roomId.toLowerCase();
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    const roomId = req.params.roomId.trim().toLowerCase() || 'egypt-10th-anniversary';
     const currentState = getOrCreateRoom(roomId);
-    const { itinerary, budget, drivers, updatedBy } = req.body;
+    const { itinerary, budget, drivers, updatedBy, reset } = req.body;
 
-    if (itinerary) currentState.itinerary = itinerary;
-    if (budget) currentState.budget = budget;
-    if (drivers) currentState.drivers = drivers;
+    if (reset) {
+      currentState.itinerary = INITIAL_ITINERARY;
+      currentState.budget = INITIAL_BUDGET;
+      currentState.drivers = INITIAL_DRIVERS;
+      currentState.version += 1;
+      currentState.updatedAt = new Date().toISOString();
+      currentState.updatedBy = updatedBy || '초기화';
+    } else {
+      if (Array.isArray(itinerary)) currentState.itinerary = itinerary;
+      if (Array.isArray(budget)) currentState.budget = budget;
+      if (Array.isArray(drivers)) currentState.drivers = drivers;
 
-    currentState.version += 1;
-    currentState.updatedAt = new Date().toISOString();
-    currentState.updatedBy = updatedBy || 'API';
+      currentState.version += 1;
+      currentState.updatedAt = new Date().toISOString();
+      currentState.updatedBy = updatedBy || '사용자';
+    }
 
     saveRoomsToDisk();
 
@@ -242,7 +256,12 @@ async function startServer() {
       state: currentState,
     });
 
-    res.json({ success: true, version: currentState.version });
+    res.json({
+      success: true,
+      version: currentState.version,
+      updatedAt: currentState.updatedAt,
+      state: currentState,
+    });
   });
 
   // Live Exchange Rates Endpoint
