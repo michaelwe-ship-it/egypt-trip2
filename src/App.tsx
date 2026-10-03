@@ -59,7 +59,7 @@ export default function App() {
   const [selectedCity, setSelectedCity] = useState<City>('ALL');
   const [itineraryViewMode, setItineraryViewMode] = useState<ItineraryViewMode>('TIMELINE');
 
-  const DATA_REVISION = '2026-10-02-v10-verified';
+  const DATA_REVISION = '2026-10-03-v11-luxor-milemoa';
 
   // Application Data States
   const [itinerary, setItinerary] = useState<ItineraryItem[]>(() => {
